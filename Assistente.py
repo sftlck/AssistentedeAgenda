@@ -22,12 +22,6 @@ INFO_VERSAO =   "05/05/2026"
 #user_zebra =          'standard_zebra'
 #password_zebra =      'Wheelp0p1'
 
-ip_linked =            '172.16.1.61'
-db_linked =            'MyLogical'
-user_linked =          'mylogical'
-password_linked =      'F@rl#2306balRP7498&we'
-INFO_VERSAO =   "30/04/2026"
-
 
 username00= getuser()
 username0 = username00.split('.')[0]
@@ -134,7 +128,9 @@ class ServiceScheduler:
         self.frame_certificados = ttk.Frame(parent_notebook)
         parent_notebook.add(self.frame_certificados, text=" Agendamento de Serviços ")
         
-        # Calendar-related attributes
+        parent_notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
+    
+        
         self.current_month_offset = 0
         self.calendar_data = {}
         self.selected_date = None
@@ -143,7 +139,18 @@ class ServiceScheduler:
         self.load_services()
         self.load_calendar_data()
         self.render_calendar()
-    
+        self.refresh_calendar()
+
+    def on_tab_changed(self, event):
+        """Refresh calendar when this tab is selected"""
+        notebook = event.widget
+        current_tab = notebook.select()
+        current_tab_text = notebook.tab(current_tab, "text")
+        self.load_calendar_data()
+        self.refresh_calendar()
+        if "Agendamento de Serviços" in current_tab_text:
+            self.refresh_calendar()
+
     def setup_ui(self):
         # Main container - split into left panel (new service) and right panel (calendar)
         main_container = tk.Frame(self.frame_certificados, bg=self.cor_fundo)
@@ -197,29 +204,24 @@ class ServiceScheduler:
         ##self.buscar = ttk.Button(search_frame, text="Buscar", command=self.perform_search).pack(side="left", padx=5)
         #self.buscar = ttk.Button(left_panel, text="Agendar Serviço", command=self.add_service, cursor='hand2').pack( pady=5)
 #
-        #self.buscar = ttk.Button(left_panel, text=" Limpar agenda ", command=self.clear_all_scheduled, cursor='hand2').pack(pady=5)
-
         #self.buscar = ttk.Button(left_panel, text=" Adiantar atualização de serviços com Metroex ", command=self.sync_services, cursor='hand2').pack(pady=5)
         
         #self.btn_add = tk.Button(left_panel, text="➕ Agendar Serviço", font=('Segoe UI', 11, 'bold'), bg='#28A745', fg='white', padx=20, pady=8,cursor='hand2', command=self.add_service)
         #self.btn_add.pack(pady=10)
 
         #self.btn_schedule = tk.Button(left_panel, text="📅 Processar Fila (FIFO)", font=('Segoe UI', 11, 'bold'), bg='#1B4B9F', fg='white', padx=20, pady=8,cursor='hand2', command=self.schedule_all)
-        self.btn_schedule = ttk.Button(main_container, text="Processar Fila (FIFO)", command=self.schedule_all, cursor='hand2').pack(pady=5)
         
         # Queue count
         self.lbl_queue = tk.Label(left_panel, text="Fila: 0 pendentes", font=('Segoe UI', 9), bg=self.cor_fundo, fg='#FFD700')
-        self.lbl_queue.pack(pady=(10, 5))
+        self.lbl_queue.pack(pady=(10, 0))
         
         # Pending list
         pending_frame = tk.Frame(left_panel, bg=self.cor_fundo)
         pending_frame.pack(fill='both', expand=True)
         
-        tk.Label(pending_frame, text="Serviços Pendentes:", font=('Segoe UI', 9, 'bold'),
-                bg=self.cor_fundo, fg='white').pack(anchor='w')
+        tk.Label(pending_frame, text="Serviços Pendentes:", font=('Segoe UI', 9, 'bold'), bg=self.cor_fundo, fg='white').pack
         
-        self.pending_listbox = tk.Listbox(pending_frame, font=('Segoe UI', 8), 
-                                           height=6, bg='white', fg='black')
+        self.pending_listbox = tk.Listbox(pending_frame, font=('Segoe UI', 8), height=6, bg='white', fg='black')
         self.pending_listbox.pack(fill='both', expand=True, pady=(2, 0))
         
         # ===== RIGHT PANEL (Calendar) =====
@@ -227,8 +229,7 @@ class ServiceScheduler:
         self.calendar_frame.pack(side='left', fill='both', expand=True)
         
         # Status bar
-        self.status_label = ttk.Label(self.frame_certificados, 
-                                       text="Pronto para agendamento", font=("Segoe UI", 12))
+        self.status_label = ttk.Label(self.frame_certificados, text="Pronto para agendamento", font=("Segoe UI", 12))
         self.status_label.pack(pady=5)
     
     def load_calendar_data(self):
@@ -309,40 +310,47 @@ class ServiceScheduler:
         year, month = target_date.year, target_date.month
         
         # Month names in Portuguese
-        meses_pt = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        meses_pt = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho','Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         
         # ===== Navigation Header =====
         nav_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
         nav_frame.pack(fill='x', pady=(0, 5))
         
-        btn_prev = tk.Label(nav_frame, text="◀", anchor='center', justify='center',
-                           font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',
-                           cursor='hand2', padx=0)
+        btn_prev = tk.Label(nav_frame, text="◀", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
         btn_prev.pack(side='left', padx=5)
         btn_prev.bind('<Button-1>', lambda e: self.change_month(-1))
         
-        month_label = tk.Label(nav_frame, text=f"{meses_pt[month-1]} {year}",
-                              font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white')
+        month_label = tk.Label(nav_frame, text=f"{meses_pt[month-1]} {year}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white')
         month_label.pack(side='left', padx=5)
         
-        btn_next = tk.Label(nav_frame, text="▶", anchor='center', justify='center',
-                           font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',
-                           cursor='hand2', padx=0)
+        btn_next = tk.Label(nav_frame, text="▶", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
         btn_next.pack(side='left', padx=5)
         btn_next.bind('<Button-1>', lambda e: self.change_month(1))
         
-        btn_today = tk.Label(nav_frame, text="Hoje", font=('Segoe UI', 9, 'bold'),
-                            bg="#FFFFFF", fg='black', padx=10, pady=2,
-                            cursor='hand2', borderwidth='1')
-        btn_today.pack(side='right', padx=5)
-        btn_today.bind('<Button-1>', lambda e: self.go_to_today())
+        #btn_today = tk.Label(nav_frame, text="Hoje", font=('Segoe UI', 9, 'bold'),bg="#FFFFFF", fg='black', padx=10, pady=2,cursor='hand2', borderwidth='1')
         
-        btn_refresh = tk.Label(nav_frame, text="🔄", font=('Segoe UI', 9, 'bold'),
-                              bg="#FFFFFF", fg='black', padx=10, pady=2,
-                              cursor='hand2', borderwidth='1')
-        btn_refresh.pack(side='right', padx=5)
-        btn_refresh.bind('<Button-1>', lambda e: self.refresh_calendar())
+        btn_today = ttk.Button(nav_frame, text=" Hoje ", command=self.go_to_today, cursor='hand2')
+        btn_today.pack(side="right", padx=5)
+
+        #btn_today = tk.Label(nav_frame, text="Hoje", font=('Segoe UI', 9, 'bold'), padx=10, pady=2,cursor='hand2')
+        #btn_today.pack(side='right', padx=5)
+        #btn_today.bind('<Button-1>', lambda e: self.go_to_today())
+        
+        #btn_refresh = tk.Label(nav_frame, text="🔄", font=('Segoe UI', 9, 'bold'),bg="#FFFFFF", fg='black', padx=10, pady=2,cursor='hand2', borderwidth='1')
+        #btn_refresh.pack(side='right', padx=5)
+
+        self.buscar = ttk.Button(nav_frame, text=" Limpar agenda ", command=self.clear_all_scheduled, cursor='hand2')
+        self.buscar.pack(side="right", padx=5)
+        btn_refresh = ttk.Button(nav_frame, text=" Atualizar ", command=self.refresh_calendar, cursor='hand2')
+        btn_refresh.pack(side="right", padx=5)
+
+        
+        self.btn_schedule = ttk.Button(nav_frame, text="Agendar", command=self.schedule_all, cursor='hand2')
+
+        self.btn_schedule.pack(side="right", padx=5)
+
+
+        #btn_refresh.bind('<Button-1>', lambda e: self.refresh_calendar())
         
         # ===== Weekday Headers =====
         header_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
@@ -449,6 +457,7 @@ class ServiceScheduler:
                         day_frame.bind('<Button-1>', lambda e, key=calendar_key: self.show_day_orders(key))
                         for child in day_frame.winfo_children():
                             child.bind('<Button-1>', lambda e, key=calendar_key: self.show_day_orders(key))
+            
     
     def change_month(self, offset):
         self.current_month_offset += offset
@@ -465,7 +474,7 @@ class ServiceScheduler:
         self.render_calendar()
         self.update_queue_count()
         self.load_pending_list()
-        self.status_label.config(text="Calendário atualizado")
+        #self.status_label.config(text="Calendário atualizado")
     
     def show_day_orders(self, calendar_key):
         """Show orders for a specific day in a popup window"""
@@ -692,17 +701,23 @@ class ServiceScheduler:
                 return
             
             # Execute scheduling
-            conn.Execute("EXEC [castro_services].dbo.sp_ScheduleNextServices @batch_size = 100")
-            conn.Close()
+            conn.Execute("EXEC [castro_services].dbo.sp_ScheduleNextServices @batch_size = 1000")
             
-            self.status_label.config(text=f"✅ {pending_count} serviço(s) agendado(s) com sucesso!")
+            conn.Close()
+
+            if pending_count == 1:
+                self.status_label.config(text=f"{pending_count} serviço agendado")
+                
+            if pending_count > 1:
+                self.status_label.config(text=f"{pending_count} serviços agendados")
+                
             self.load_calendar_data()
             self.render_calendar()
             self.update_queue_count()
             self.load_pending_list()
             
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao agendar:\n{str(e)}")
+            messagebox.showerror("Erro", f"Falha ao agendar:\n\n{str(e)}")
     
     def update_queue_count(self):
         try:
@@ -773,11 +788,22 @@ class ServiceSchedulerLinkedDirect:
         self.frame_certificados = ttk.Frame(parent_notebook)
         parent_notebook.add(self.frame_certificados, text=" Serviços para Agendamento ")
         
+        parent_notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
+    
         self.selected_services = []
         
         self.setup_ui()
         self.load_services()
-    
+
+    def on_tab_changed(self, event):
+        print('tab changed')
+        notebook = event.widget
+        current_tab = notebook.select()
+        current_tab_text = notebook.tab(current_tab, "text")
+
+        if "Serviços Vinculados" in current_tab_text or "Agendar Serviços" in current_tab_text:
+            self.load_services()
+
     def setup_ui(self):
         main_container = tk.Frame(self.frame_certificados, bg=self.cor_fundo)
         main_container.pack(fill='both', expand=True, padx=10, pady=10)
@@ -1043,10 +1069,12 @@ class ServiceSchedulerLinkedDirect:
         context_menu = tk.Menu(self.tree, tearoff=0)
         
         count = len(selected)
-        context_menu.add_command(
-            label=f"📅 Agendar {count} serviço(s)",
-            command=self.schedule_selected
-        )
+        
+        if count == 1:
+            context_menu.add_command(label=f"Agendar serviço",command=self.schedule_selected)
+            
+        if count > 1:
+            context_menu.add_command(label=f"Agendar serviços",command=self.schedule_selected)
         
         context_menu.add_separator()
         context_menu.add_command(label="Selecionar Todos", command=self.select_all)
@@ -1233,7 +1261,7 @@ ttk.Label(content_frame, text=F"Status do Servidor {db}").pack(pady=(20, 0))
 label_status = tk.Label(content_frame, text=status_servidor, fg=cor_status, bg=cor_fundo, font=("Segoe UI", 10, "bold"))
 label_status.pack(pady=5)
 
-ttk.Label(content_frame, text=F"Status do Servidor {db_linked} [Em desenvolvimento]").pack(pady=(0, 0))
+ttk.Label(content_frame, text=F"Status do Servidor {db_linked}").pack(pady=(0, 0))
 label_status3 = tk.Label(content_frame, text=status_servidor, fg=cor_status, bg=cor_fundo, font=("Segoe UI", 10, "bold"))
 label_status3.pack(pady=5)
 
