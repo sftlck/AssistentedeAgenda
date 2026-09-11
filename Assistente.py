@@ -136,6 +136,8 @@ class ServiceScheduler:
     def __init__(self, parent_notebook, str_conn, cor_fundo):
         self.str_conn = str_conn
         self.cor_fundo = cor_fundo
+        
+        #self.str_conn_primary = str_conn_primary
         self.frame_certificados = ttk.Frame(parent_notebook)
         parent_notebook.add(self.frame_certificados, text=" Calendário de Pressão [Em desenvolvimento] ")
         
@@ -163,7 +165,7 @@ class ServiceScheduler:
         """Internal auto-refresh loop"""
         self.refresh_calendar()
         # Schedule next refresh in 5 seconds
-        self.frame_certificados.after(5000, self._auto_refresh)
+        self.frame_certificados.after(8000, self._auto_refresh)
 
     def on_tab_changed(self, event):
         """Refresh calendar only when this tab is selected"""
@@ -199,6 +201,108 @@ class ServiceScheduler:
             os_part = parts[0].replace("OS ", "").strip()
             return os_part
         return ""
+    
+    def load_exceptions_for_date(self, check_date):
+        """Load calendar exceptions for a specific date"""
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            date_str = check_date.strftime('%Y-%m-%d') if isinstance(check_date, date) else str(check_date)
+            
+            sql = f"""
+                SELECT exception_type, start_time, end_time, notes
+                FROM [castro_services].dbo.Calendar_Exceptions
+                WHERE exception_date = '{date_str}'
+                AND is_available = 0
+            """
+            
+            rs.Open(sql, conn)
+            
+            exceptions = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    exc_type = rs.Fields('exception_type').Value
+                    start_t = rs.Fields('start_time').Value
+                    end_t = rs.Fields('end_time').Value
+                    notes = rs.Fields('notes').Value if rs.Fields('notes').Value else ""
+                    
+                    if start_t and isinstance(start_t, str):
+                        start_t = str(start_t)[:5]
+                    if end_t and isinstance(end_t, str):
+                        end_t = str(end_t)[:5]
+                    
+                    if start_t and end_t:
+                        exceptions.append(f"{start_t}-{end_t}: {notes}")
+                    else:
+                        exceptions.append(f"Dia inteiro: {notes}")
+                    
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            return exceptions
+            
+        except Exception as e:
+            print(f"Error loading exceptions: {e}")
+            return []
+
+    def _get_exceptions(self):
+        """Load Calendar_Exceptions into memory"""
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            sql = """
+                SELECT exception_date, exception_type, start_time, end_time, is_available
+                FROM [castro_services].dbo.Calendar_Exceptions
+            """
+            
+            rs.Open(sql, conn)
+            
+            result = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    exc_date = rs.Fields('exception_date').Value
+                    if isinstance(exc_date, str):
+                        exc_date = datetime.strptime(exc_date, '%Y-%m-%d').date()
+                    elif isinstance(exc_date, datetime):
+                        exc_date = exc_date.date()
+                    
+                    start_t = rs.Fields('start_time').Value
+                    end_t = rs.Fields('end_time').Value
+                    
+                    if start_t and isinstance(start_t, str):
+                        parts = start_t.split(':')
+                        start_t = time(int(parts[0]), int(parts[1]))
+                    if end_t and isinstance(end_t, str):
+                        parts = end_t.split(':')
+                        end_t = time(int(parts[0]), int(parts[1]))
+                    
+                    result.append({
+                        'exception_date': exc_date,
+                        'exception_type': rs.Fields('exception_type').Value,
+                        'start_time': start_t,
+                        'end_time': end_t,
+                        'is_available': rs.Fields('is_available').Value
+                    })
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            return result
+            
+        except Exception as e:
+            print(f"Error loading exceptions: {e}")
+            return []
 
     def load_calendar_data(self):
         """Load all scheduled services grouped by date"""
@@ -442,23 +546,428 @@ class ServiceScheduler:
         return notes[:15]  
 
     def show_day_context_menu(self, event, calendar_key):
-        """Right-click context menu for calendar day - with blank placeholder functions"""
         context_menu = tk.Menu(self.calendar_frame, tearoff=0)
         
         date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
         count = len(self.calendar_data.get(calendar_key, []))
         
         if count == 1:
-            context_menu.add_command(label=f"Ver serviço",command=lambda k=calendar_key: self.show_day_orders(k))  
+            context_menu.add_command(label=f"Ver serviço", command=lambda k=calendar_key: self.show_day_orders(k))
         elif count > 1:
-            context_menu.add_command(label=f"Ver serviços",command=lambda k=calendar_key: self.show_day_orders(k))
-            
+            context_menu.add_command(label=f"Ver serviços", command=lambda k=calendar_key: self.show_day_orders(k))
+        
         context_menu.add_separator()
-        context_menu.add_command(label="Iniciar chat do Teams com Laboratório de Pressão",command=self.open_teams_chat)
-        #context_menu.add_command(label="Função 2 (placeholder)",command=self.context_function_2)
+        
+        if count == 1:
+            context_menu.add_command(label=f"Reagendar o serviço deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
+        else:
+            context_menu.add_command(label=f"Reagendar todos os {count} serviços deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
+        
+        context_menu.add_separator()
+        context_menu.add_command(label="Iniciar chat do Teams com Laboratório de Pressão", command=self.open_teams_chat)
         
         context_menu.post(event.x_root, event.y_root)
-    
+
+    def reschedule_day_services(self, calendar_key):
+        """Reschedule all services from a specific day to future dates only"""
+        if calendar_key not in self.calendar_data:
+            messagebox.showinfo("Aviso", "Nenhum serviço neste dia!")
+            return
+        
+        count = len(self.calendar_data[calendar_key])
+        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
+        
+        confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar {count} serviço(s) do dia {date_str}?\n\n")
+        
+        if not confirm:
+            return
+        
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn.Open(self.str_conn)
+            
+            reschedule_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+            date_str_sql = reschedule_date.strftime('%Y-%m-%d')
+            
+            # Get schedule_ids for this date
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            sql = f"""
+                SELECT ts.schedule_id
+                FROM [castro_services].dbo.Time_Slots ts
+                WHERE ts.slot_date = '{date_str_sql}'
+            """
+            rs.Open(sql, conn)
+            
+            schedule_ids = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    schedule_ids.append(rs.Fields('schedule_id').Value)
+                    rs.MoveNext()
+            rs.Close()
+            
+            if not schedule_ids:
+                conn.Close()
+                return
+            
+            # Delete time slots for this date
+            conn.Execute(f"DELETE FROM [castro_services].dbo.Time_Slots WHERE slot_date = '{date_str_sql}'")
+            
+            # Reset services to PENDING
+            id_list = ','.join(str(sid) for sid in schedule_ids)
+            conn.Execute(f"""
+                UPDATE [castro_services].dbo.Service_Schedule
+                SET status = 'PENDING',
+                    scheduled_start = NULL,
+                    scheduled_end = NULL,
+                    updated_at = GETDATE()
+                WHERE id IN ({id_list})
+            """)
+            
+            conn.Close()
+            
+            # Re-schedule starting from NEXT DAY (skip the cleared day)
+            self.next_start, self.next_end = self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
+            
+            # Refresh
+            self.load_calendar_data()
+            self.refresh_calendar()
+            self.update_queue_count()
+
+            if count == 1 :
+                self.status_label.config(text=f"{count} serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M:%S')} às {self.next_end.strftime('%H:%M:%S')}")
+            if count > 1:
+                self.status_label.config(text=f"{count} serviço reagendado para a partir de {self.next_start.strftime('%d/%m/%Y')}")
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
+
+    def schedule_all_pending(self, from_date=None):
+        """Schedule all pending services using Python FIFO"""
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn.Open(self.str_conn)
+            
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            sql = """
+                SELECT 
+                    ss.id as schedule_id,
+                    ss.service_id,
+                    s.execution_time_minutes,
+                    ss.priority
+                FROM [castro_services].dbo.Service_Schedule ss
+                JOIN [castro_services].dbo.Service_Modes_Local s ON ss.service_id = s.id
+                WHERE ss.status = 'PENDING'
+                ORDER BY ss.priority ASC, ss.requested_at ASC
+            """
+            rs.Open(sql, conn)
+            
+            pending_services = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    pending_services.append({
+                        'schedule_id': rs.Fields('schedule_id').Value,
+                        'service_id': rs.Fields('service_id').Value,
+                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
+                        'priority': rs.Fields('priority').Value
+                    })
+                    rs.MoveNext()
+            rs.Close()
+            
+            if len(pending_services) == 0:
+                conn.Close()
+                return
+            
+            # Start from specified date or now
+            if from_date:
+                current_time = datetime.combine(from_date, time(8, 0))
+            else:
+                current_time = datetime.now()
+            
+            for service in pending_services:
+                self.next_start, self.next_end = self.find_next_available_slot(
+                    current_time,
+                    service['execution_time_minutes']
+                )
+                
+                if self.next_start is None:
+                    continue
+                
+                conn.Execute(f"""
+                    UPDATE [castro_services].dbo.Service_Schedule
+                    SET scheduled_start = '{self.next_start.strftime('%Y-%m-%d %H:%M:%S')}',
+                        scheduled_end = '{self.next_end.strftime('%Y-%m-%d %H:%M:%S')}',
+                        status = 'SCHEDULED',
+                        updated_at = GETDATE()
+                    WHERE id = {service['schedule_id']}
+                """)
+                
+                conn.Execute(f"""
+                    INSERT INTO [castro_services].dbo.Time_Slots
+                        (slot_date, start_time, end_time, schedule_id, service_id)
+                    VALUES (
+                        '{self.next_start.strftime('%Y-%m-%d')}',
+                        '{self.next_start.strftime('%H:%M:%S')}',
+                        '{self.next_end.strftime('%H:%M:%S')}',
+                        {service['schedule_id']},
+                        {service['service_id']}
+                    )
+                """)
+                
+                current_time = self.next_end
+                
+            conn.Close()
+            
+            return self.next_start, self.next_end
+            
+        except Exception as e:
+            print(f"Error in schedule_all_pending: {e}")
+
+    def find_next_available_slot(self, from_time, duration_minutes):
+        """
+        Find next available time slot starting from `from_time`
+        Replicates sp_FindNextAvailableSlot logic in Python
+        
+        Returns: (start_datetime, end_datetime) or (None, None) if no slot found
+        """
+        check_date = from_time.date()
+        max_days = 365
+        
+        # Load all data once
+        availability = self._get_availability()
+        exceptions = self._get_exceptions()
+        
+        for day_offset in range(max_days):
+            sql_day_of_week = (check_date.weekday() + 1) % 7
+            
+            # Check if this day has any availability windows
+            day_windows = [w for w in availability if w['day_of_week'] == sql_day_of_week]
+            
+            if not day_windows:
+                check_date += timedelta(days=1)
+                from_time = datetime.combine(check_date, time(8, 0))
+                continue
+            
+            # Check for full-day exception (holiday)
+            full_day_blocked = False
+            for ex in exceptions:
+                if ex['exception_date'] == check_date and ex['is_available'] == False and ex['start_time'] is None:
+                    full_day_blocked = True
+                    break
+            
+            if full_day_blocked:
+                check_date += timedelta(days=1)
+                from_time = datetime.combine(check_date, time(8, 0))
+                continue
+            
+            # Try each availability window
+            for window in sorted(day_windows, key=lambda w: w['start_time']):
+                window_start_dt = datetime.combine(check_date, window['start_time'])
+                window_end_dt = datetime.combine(check_date, window['end_time'])
+                
+                # Adjust start if from_time is later
+                proposed_start = max(from_time, window_start_dt)
+                
+                # TRY MULTIPLE POSITIONS WITHIN THIS WINDOW
+                while proposed_start + timedelta(minutes=duration_minutes) <= window_end_dt:
+                    proposed_end = proposed_start + timedelta(minutes=duration_minutes)
+                    
+                    # Check for time-specific exceptions (lunch break)
+                    blocked_by_exception = False
+                    for ex in exceptions:
+                        if (ex['exception_date'] == check_date and 
+                            ex['is_available'] == False and 
+                            ex['start_time'] is not None and 
+                            ex['end_time'] is not None):
+                            
+                            ex_start_dt = datetime.combine(check_date, ex['start_time'])
+                            ex_end_dt = datetime.combine(check_date, ex['end_time'])
+                            
+                            if proposed_start < ex_end_dt and proposed_end > ex_start_dt:
+                                blocked_by_exception = True
+                                # Jump past the exception
+                                proposed_start = ex_end_dt
+                                break
+                    
+                    if blocked_by_exception:
+                        continue  # Re-test with new proposed_start
+                    
+                    # Check for conflicts with existing Time_Slots
+                    if self._has_time_slot_conflict(check_date, proposed_start.time(), proposed_end.time()):
+                        # Jump to the end of the conflicting slot
+                        next_free = self._get_next_free_time(check_date, proposed_start.time())
+                        if next_free is None:
+                            break  # No more free time in this window
+                        proposed_start = datetime.combine(check_date, next_free)
+                        continue  # Re-test with new proposed_start
+                    
+                    # Found a valid slot!
+                    return proposed_start, proposed_end
+                
+                # No slot in this window, try next window
+                # Reset proposed_start to beginning of next window or from_time
+                pass
+            
+            # No slot found today, move to next day
+            check_date += timedelta(days=1)
+            if day_windows:
+                earliest = min(w['start_time'] for w in day_windows)
+                from_time = datetime.combine(check_date, earliest)
+            else:
+                from_time = datetime.combine(check_date, time(8, 0))
+        
+        return None, None
+
+    def _get_next_free_time(self, check_date, after_time):
+        """
+        Get the end time of the conflicting slot that starts at or contains `after_time`.
+        Returns the end time as a time object, or None if at end of day.
+        """
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            date_str = check_date.strftime('%Y-%m-%d')
+            time_str = after_time.strftime('%H:%M:%S') if isinstance(after_time, time) else str(after_time)
+            
+            sql = f"""
+                SELECT TOP 1 end_time
+                FROM [castro_services].dbo.Time_Slots
+                WHERE slot_date = '{date_str}'
+                AND start_time <= '{time_str}'
+                AND end_time > '{time_str}'
+                ORDER BY end_time ASC
+            """
+            
+            rs.Open(sql, conn)
+            
+            if not rs.EOF:
+                end_time = rs.Fields('end_time').Value
+                if isinstance(end_time, str):
+                    parts = end_time.split(':')
+                    result = time(int(parts[0]), int(parts[1]), int(parts[2][:2]) if len(parts) > 2 else 0)
+                else:
+                    result = end_time
+                rs.Close()
+                conn.Close()
+                return result
+            
+            # If no slot contains this exact time, find the next slot that starts after
+            sql2 = f"""
+                SELECT TOP 1 start_time, end_time
+                FROM [castro_services].dbo.Time_Slots
+                WHERE slot_date = '{date_str}'
+                AND start_time > '{time_str}'
+                ORDER BY start_time ASC
+            """
+            
+            rs.Open(sql2, conn)
+            
+            if not rs.EOF:
+                end_time = rs.Fields('end_time').Value
+                if isinstance(end_time, str):
+                    parts = end_time.split(':')
+                    result = time(int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0)
+                else:
+                    result = end_time
+                rs.Close()
+                conn.Close()
+                return result
+            
+            rs.Close()
+            conn.Close()
+            return None
+            
+        except Exception as e:
+            messagebox.showinfo("Erro:", f"Error getting next free time: {e}")
+            print(f"Error getting next free time: {e}")
+            return None
+
+    def _has_time_slot_conflict(self, check_date, start_time, end_time):
+        """Check if proposed time conflicts with existing Time_Slots"""
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            # Convert times to string format for SQL comparison
+            start_str = start_time.strftime('%H:%M:%S') if isinstance(start_time, time) else str(start_time)
+            end_str = end_time.strftime('%H:%M:%S') if isinstance(end_time, time) else str(end_time)
+            date_str = check_date.strftime('%Y-%m-%d') if isinstance(check_date, date) else str(check_date)
+            
+            sql = f"""
+                SELECT COUNT(*) as cnt
+                FROM [castro_services].dbo.Time_Slots
+                WHERE slot_date = '{date_str}'
+                AND start_time < '{end_str}'
+                AND end_time > '{start_str}'
+            """
+            
+            rs.Open(sql, conn)
+            
+            count = rs.Fields('cnt').Value if not rs.EOF else 0
+            rs.Close()
+            conn.Close()
+            
+            return count > 0
+            
+        except Exception as e:
+            print(f"Error checking conflicts: {e}")
+            return True  # Assume conflict on error (safe side)
+
+
+    def _get_availability(self):
+        """Load Calendar_Availability into memory"""
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            sql = """
+                SELECT day_of_week, start_time, end_time
+                FROM [castro_services].dbo.Calendar_Availability
+                WHERE is_active = 1
+                ORDER BY day_of_week, start_time
+            """
+            
+            rs.Open(sql, conn)
+            
+            result = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    start_t = rs.Fields('start_time').Value
+                    end_t = rs.Fields('end_time').Value
+                    
+                    # Convert to time objects if string
+                    if isinstance(start_t, str):
+                        parts = start_t.split(':')
+                        start_t = time(int(parts[0]), int(parts[1]))
+                    if isinstance(end_t, str):
+                        parts = end_t.split(':')
+                        end_t = time(int(parts[0]), int(parts[1]))
+                    
+                    result.append({
+                        'day_of_week': rs.Fields('day_of_week').Value,
+                        'start_time': start_t,
+                        'end_time': end_t
+                    })
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            return result
+            
+        except Exception as e:
+            print(f"Error loading availability: {e}")
+            return []
+
     def open_teams_chat(self):
         try:
             
@@ -492,6 +1001,12 @@ class ServiceScheduler:
         self.update_queue_count()
         #self.load_pending_list()
     def show_day_orders(self, calendar_key):
+        
+        popup = tk.Toplevel(self.frame_certificados)
+        popup.geometry("850x400")
+        popup.minsize(800, 400)
+        popup.configure(bg=self.cor_fundo)
+        popup.calendar_key = calendar_key
 
         if calendar_key not in self.calendar_data:
             return
@@ -499,10 +1014,6 @@ class ServiceScheduler:
         orders = self.calendar_data[calendar_key]
         date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
         
-        popup = tk.Toplevel(self.frame_certificados)
-        popup.geometry("850x400")
-        popup.minsize(800, 400)
-        popup.configure(bg=self.cor_fundo)
         popup.title(f"Serviços - {date_str} (Laboratório de Pressão)")
         
         # ===== TOP FRAME =====
@@ -561,8 +1072,20 @@ class ServiceScheduler:
                 f"{order['execution_time_minutes']} min",
                 order['status']
             ), tags=(tag,))
-        
-        # Buttons at bottom
+        # Load and display exceptions for this date
+
+        exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+        exceptions = self.load_exceptions_for_date(exc_date)
+
+        if exceptions:
+            exc_frame = tk.Frame(popup, bg=self.cor_fundo)
+            exc_frame.pack(fill='x', padx=10, pady=(0, 5))
+            
+            tk.Label(exc_frame, text="Bloqueios de Agenda:", font=('Segoe UI', 9, 'bold'),bg=self.cor_fundo, fg='#FFD700').pack(anchor='w')
+            
+            for exc in exceptions:
+                tk.Label(exc_frame, text=f"  ⛔ {exc}", font=('Segoe UI', 8),bg=self.cor_fundo, fg='#FF9999').pack(anchor='w')
+                
         btn_frame = tk.Frame(popup, bg=self.cor_fundo)
         btn_frame.pack(fill='x', padx=10, pady=(5, 10))
         
@@ -580,7 +1103,6 @@ class ServiceScheduler:
         os_code_num = format_os_code(os_code_num)
         return f"https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Atendimento%20ao%20Cliente/E%20-%20Ordens%20de%20Servi%C3%A7o/{os_year}/{os_code_num}"
 
-
     def show_popup_context_menu(self, event, tree):
         """Context menu for the popup treeview"""
         selected = tree.selection()
@@ -588,25 +1110,38 @@ class ServiceScheduler:
         if not selected:
             return
         
+        # Get the popup window (tree's grandparent or use winfo_toplevel)
+        popup = tree.winfo_toplevel()
+        calendar_key = getattr(popup, 'calendar_key', None)
+        count = len(self.calendar_data.get(calendar_key, []))
+        
         context_menu = tk.Menu(tree, tearoff=0)
         
         values = tree.item(selected[0])['values']
-        os_code = values[1] if len(values) > 1 else ""  # OS is column index 1
+        os_code = values[1] if len(values) > 1 else ""
         sharepoint_url = self.get_sharepoint_url(os_code)
         
-
-
-        context_menu.add_command(label="Iniciar chat do Teams com Laboratório de Pressão",command=self.open_teams_chat)
+        context_menu.add_command(label="💬 Chat do Teams", command=self.open_teams_chat)
         context_menu.add_separator()
         
         if sharepoint_url:
-            context_menu.add_command(label="Abrir link do Sharepoint no navegador",command=lambda u=sharepoint_url: webbrowser.open(u))
-            context_menu.add_command(label="Copiar link do Sharepoint",command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
+            context_menu.add_command(label="📁 Abrir SharePoint", command=lambda u=sharepoint_url: webbrowser.open(u))
+            context_menu.add_command(label="📋 Copiar link SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
         
         context_menu.add_separator()
-        context_menu.add_command(label="Abrir link do diretório da planilha de cálculo ",command=lambda: self.open_teams_link_planilha(None))
+        context_menu.add_command(label="📊 Abrir planilha de cálculo", command=lambda: self.open_teams_link_planilha(None))
+        
+        if calendar_key and count > 0:
+            context_menu.add_separator()
+            print('calendar_key',calendar_key)
+            if count == 1:
+                
+                context_menu.add_command(label=f"Reagendar o serviço deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
+            if count > 1:
+                context_menu.add_command(label=f"Reagendar os {count} serviços deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
         
         context_menu.post(event.x_root, event.y_root)
+
 
     def open_teams_link_planilha(self, item):
         try:
@@ -745,8 +1280,8 @@ class ServiceSchedulerLinkedDirect:
     def __init__(self, parent_notebook, str_conn, str_conn_primary,cor_fundo):
         self.str_conn = str_conn
         self.str_conn_primary = str_conn_primary
-        self.service_scheduler = ServiceScheduler(notebook, STR_CONN, cor_fundo)   ### ZEBRA
         self.cor_fundo = cor_fundo
+        self.service_scheduler = ServiceScheduler(notebook, STR_CONN, self.cor_fundo)   ### ZEBRA
         self.frame_certificados = ttk.Frame(parent_notebook)
         parent_notebook.add(self.frame_certificados, text=" Serviços a Agendar ")
 
@@ -782,21 +1317,21 @@ class ServiceSchedulerLinkedDirect:
         ttk.Entry(date_frame, textvariable=self.exc_year_var, width=5,background='black').pack(side='left')
         
         # Start Time
-        tk.Label(popup, text="Horário Início (HH:MM):", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(10, 0))
+        tk.Label(popup, text="Horário de Início (HH:MM):", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(10, 0))
 
         self.exc_start_var = tk.StringVar(value="")
         exc_start_entry = ttk.Entry(popup, textvariable=self.exc_start_var, width=10)
         exc_start_entry.pack(anchor='w', padx=20, pady=(2, 5))
 
         # End Time
-        tk.Label(popup, text="Horário Fim (HH:MM):", font=('Segoe UI', 9),bg='black', fg='white').pack(anchor='w', padx=20, pady=(5, 0))
+        tk.Label(popup, text="Horário de Encerramento (HH:MM):", font=('Segoe UI', 9),bg='black', fg='white').pack(anchor='w', padx=20, pady=(5, 0))
 
         self.exc_end_var = tk.StringVar(value="")
         exc_end_entry = ttk.Entry(popup, textvariable=self.exc_end_var, width=10)
         exc_end_entry.pack(anchor='w', padx=20, pady=(2, 5))
 
         # Notes
-        tk.Label(popup, text="Motivo:", font=('Segoe UI', 9),bg='black', fg='white').pack(anchor='w', padx=20, pady=(5, 0))
+        tk.Label(popup, text="Razão:", font=('Segoe UI', 9),bg='black', fg='white').pack(anchor='w', padx=20, pady=(5, 0))
 
         self.exc_notes_var = tk.StringVar(value="")
         ttk.Entry(popup, textvariable=self.exc_notes_var, width=40).pack(anchor='w', padx=20, pady=(2, 5))
@@ -811,7 +1346,7 @@ class ServiceSchedulerLinkedDirect:
                 exc_end_entry.config(state='normal')
 
         self.exc_full_day = tk.BooleanVar(value=False)
-        ttk.Checkbutton(popup, text="Dia inteiro (ignora horários)", variable=self.exc_full_day, command=toggle_time_fields).pack(anchor='w', padx=20, pady=(10, 5))
+        ttk.Checkbutton(popup, text="Dia inteiro", variable=self.exc_full_day, command=toggle_time_fields).pack(anchor='w', padx=20, pady=(10, 5))
 
         # Buttons
         btn_frame = tk.Frame(popup, bg='black')
@@ -820,7 +1355,6 @@ class ServiceSchedulerLinkedDirect:
         ttk.Button(btn_frame, text=" Salvar ", command=lambda: self.save_exception(popup)).pack(side='left', padx=5)
         ttk.Button(btn_frame, text=" Cancelar ", command=popup.destroy).pack(side='left', padx=5)
 
-
     def save_exception(self, popup):
         """Save the new calendar exception to database"""
         try:
@@ -828,10 +1362,11 @@ class ServiceSchedulerLinkedDirect:
             month = self.exc_month_var.get().strip().zfill(2)
             year = self.exc_year_var.get().strip()
             
-            exception_date = f"{year}-{month}-{day}"
+            exception_date_sql = f"{year}-{month}-{day}"
+            exception_date_br = f"{day}/{month}/{year}"
             
             # Validate date
-            datetime.strptime(exception_date, '%Y-%m-%d')
+            datetime.strptime(exception_date_sql, '%Y-%m-%d')
             
             is_full_day = self.exc_full_day.get()
             start_time = None if is_full_day else self.exc_start_var.get().strip()
@@ -857,8 +1392,11 @@ class ServiceSchedulerLinkedDirect:
                         messagebox.showwarning("Aviso", "Horário inválido!")
                         return
                 
-                start_time = f"{start_time}:00"
-                end_time = f"{end_time}:00"
+                start_time_str = f"{start_time}:00"
+                end_time_str = f"{end_time}:00"
+            else:
+                start_time_str = None
+                end_time_str = None
             
             conn = win32com.client.Dispatch("ADODB.Connection")
             conn.Open(self.str_conn_primary)
@@ -867,10 +1405,10 @@ class ServiceSchedulerLinkedDirect:
                 INSERT INTO [castro_services].dbo.Calendar_Exceptions
                     (exception_date, exception_type, start_time, end_time, is_available, notes)
                 VALUES (
-                    '{exception_date}',
+                    '{exception_date_sql}',
                     'MODIFIED_HOURS',
-                    {f"'{start_time}'" if start_time else 'NULL'},
-                    {f"'{end_time}'" if end_time else 'NULL'},
+                    {f"'{start_time_str}'" if start_time_str else 'NULL'},
+                    {f"'{end_time_str}'" if end_time_str else 'NULL'},
                     0,
                     '{notes.replace("'", "''")}'
                 )
@@ -880,17 +1418,90 @@ class ServiceSchedulerLinkedDirect:
             conn.Close()
             
             popup.destroy()
-            messagebox.showinfo("Info agendamento", f"Bloqueio de calendário adicionado em: {exception_date}")
-
-            self.status_label.config(text=f"Bloqueio de calendário adicionado em: {exception_date}")
-            self.service_scheduler.load_calendar_data()
-            self.service_scheduler.render_calendar()
+            
+            # Build message text
+            if is_full_day:
+                msg = f"Bloqueio adicionado:\n\nData: {exception_date_br}\nDia inteiro\Razão: {notes}"
+            else:
+                msg = f"Bloqueio adicionado:\n\nData: {exception_date_br}\nHorário: {start_time} às {end_time}\Razão: {notes}"
+            
+            messagebox.showinfo("Info agendamento", msg)
+            
+            self.status_label.config(text=f"✅ Bloqueio adicionado: {exception_date_br}")
+            self.load_calendar_data()
+            self.render_calendar()
             
         except ValueError:
             messagebox.showwarning("Aviso", "Data inválida!")
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao salvar exceção:\n{str(e)}")
 
+    def load_calendar_data(self):
+        """Load all scheduled services grouped by date"""
+        self.calendar_data.clear()
+        
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn.Open(self.str_conn)
+            
+            sql = """
+                SELECT 
+                    ts.slot_date,
+                    ts.start_time,
+                    ts.end_time,
+                    s.code,
+                    s.specification,
+                    s.description,
+                    s.execution_time_minutes,
+                    ss.notes,
+                    ss.status,
+                    ss.priority,
+                    ss.id as schedule_id
+                FROM [castro_services].dbo.Time_Slots ts
+                JOIN [castro_services].dbo.Service_Schedule ss ON ts.schedule_id = ss.id
+                JOIN [castro_services].dbo.Service_Modes_Local s ON ts.service_id = s.id
+                ORDER BY ts.slot_date, ts.start_time
+            """
+            
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            rs.Open(sql, conn)
+            
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    slot_date = rs.Fields('slot_date').Value
+                    
+                    if isinstance(slot_date, str):
+                        slot_date = datetime.strptime(slot_date, '%Y-%m-%d').date()
+                    elif isinstance(slot_date, datetime):
+                        slot_date = slot_date.date()
+                    
+                    calendar_key = (slot_date.day, slot_date.month, slot_date.year)
+                    
+                    order_data = {
+                        'start_time': rs.Fields('start_time').Value,
+                        'end_time': rs.Fields('end_time').Value,
+                        'code': rs.Fields('code').Value,
+                        'specification': rs.Fields('specification').Value,
+                        'description': rs.Fields('description').Value,
+                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
+                        'notes': rs.Fields('notes').Value,
+                        'status': rs.Fields('status').Value,
+                        'priority': rs.Fields('priority').Value
+                    }
+                    
+                    if calendar_key not in self.calendar_data:
+                        self.calendar_data[calendar_key] = []
+                    self.calendar_data[calendar_key].append(order_data)
+                    
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+        except Exception as e:
+            print(f"Error loading calendar data: {e}")
+    
     def find_next_available_slot(self, from_time, duration_minutes):
         """
         Find next available time slot starting from `from_time`
@@ -1387,7 +1998,7 @@ class ServiceSchedulerLinkedDirect:
         
         self.btn_select_all = ttk.Button(button_frame, text=" Selecionar Todos ", command=self.select_all, cursor='hand2')
         self.btn_select_all.pack(side="left", padx=5)
-        
+
         self.btn_schedule = ttk.Button(button_frame, text=" Agendar Selecionados ", command=self.schedule_selected, cursor='hand2')
         self.btn_schedule.pack(side="left", padx=5)
         self.btn_schedule.config(state="disabled")
