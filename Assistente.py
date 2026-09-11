@@ -42,7 +42,6 @@ STR_CONN = (
     f"User ID=sa;"
     f"Password=Wheelp0p2;"
 )
-
 STR_CONN_LINKED = (
     f"Provider=SQLOLEDB;"
     f"Data Source={ip_linked};"
@@ -129,7 +128,8 @@ def format_os_code(os_code):
     elif len(os_code) == 3:
         os_code = f"0{os_code}"
         return os_code
- 
+
+
 class ServiceScheduler:
     """ ABA: Agendamento de Serviços (Calibração FIFO) """
     
@@ -347,16 +347,17 @@ class ServiceScheduler:
                     calendar_key = (slot_date.day, slot_date.month, slot_date.year)
                     
                     order_data = {
-                        'start_time': rs.Fields('start_time').Value,
-                        'end_time': rs.Fields('end_time').Value,
-                        'code': rs.Fields('code').Value,
-                        'specification': rs.Fields('specification').Value,
-                        'description': rs.Fields('description').Value,
-                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
-                        'notes': rs.Fields('notes').Value,
-                        'status': rs.Fields('status').Value,
-                        'priority': rs.Fields('priority').Value
-                    }
+                    'start_time': rs.Fields('start_time').Value,
+                    'end_time': rs.Fields('end_time').Value,
+                    'code': rs.Fields('code').Value,
+                    'specification': rs.Fields('specification').Value,
+                    'description': rs.Fields('description').Value,
+                    'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
+                    'notes': rs.Fields('notes').Value,
+                    'status': rs.Fields('status').Value,
+                    'priority': rs.Fields('priority').Value,
+                    'schedule_id': rs.Fields('schedule_id').Value  # ADD THIS LINE
+                }
                     
                     if calendar_key not in self.calendar_data:
                         self.calendar_data[calendar_key] = []
@@ -500,17 +501,11 @@ class ServiceScheduler:
                         
                         preview_text = "\n".join(unique_items[:4])
                         
-                        preview = tk.Label(day_frame, text=preview_text,
-                                        font=('Segoe UI', 7), bg=bg_color,
-                                        fg='#333333', anchor='w', justify='left',
-                                        cursor='hand2')
+                        preview = tk.Label(day_frame, text=preview_text,font=('Segoe UI', 7), bg=bg_color,fg='#333333', anchor='w', justify='left',cursor='hand2')
                         preview.pack(fill='x', padx=3)
 
                         if len(unique_items) > 4:
-                            more_label = tk.Label(day_frame,
-                                                text=f"+{len(unique_items) - 4} mais...",
-                                                font=('Segoe UI', 6), bg=bg_color,
-                                                fg="#4A4949", anchor='w')
+                            more_label = tk.Label(day_frame,text=f"+{len(unique_items) - 4} mais...",font=('Segoe UI', 6), bg=bg_color,fg="#4A4949", anchor='w')
                             more_label.pack(fill='x', padx=3)
                     
                     # Bind left-click to show orders
@@ -635,10 +630,13 @@ class ServiceScheduler:
             self.update_queue_count()
 
             if count == 1 :
-                self.status_label.config(text=f"{count} serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M:%S')} às {self.next_end.strftime('%H:%M:%S')}")
+                self.status_label.config(text=f"{count} serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}")    
+                messagebox.showinfo('Info agendamento',f'{count} serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}')
+
             if count > 1:
-                self.status_label.config(text=f"{count} serviço reagendado para a partir de {self.next_start.strftime('%d/%m/%Y')}")
-            
+                self.status_label.config(text=f"Serviço reagendado para a partir de {self.next_start.strftime('%d/%m/%Y')}")
+                messagebox.showinfo('Info agendamento',f'Serviço reagendado para a partir de {self.next_start.strftime('%d/%m/%Y')}')
+
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
 
@@ -1016,6 +1014,7 @@ class ServiceScheduler:
         
         popup.title(f"Serviços - {date_str} (Laboratório de Pressão)")
         
+        popup.schedule_ids = [o.get('schedule_id') for o in orders]
         # ===== TOP FRAME =====
         top_frame = tk.Frame(popup, bg=self.cor_fundo)
         top_frame.pack(fill='x', padx=10, pady=(10, 0))
@@ -1104,16 +1103,15 @@ class ServiceScheduler:
         return f"https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Atendimento%20ao%20Cliente/E%20-%20Ordens%20de%20Servi%C3%A7o/{os_year}/{os_code_num}"
 
     def show_popup_context_menu(self, event, tree):
-        """Context menu for the popup treeview"""
         selected = tree.selection()
         
         if not selected:
             return
         
-        # Get the popup window (tree's grandparent or use winfo_toplevel)
         popup = tree.winfo_toplevel()
         calendar_key = getattr(popup, 'calendar_key', None)
-        count = len(self.calendar_data.get(calendar_key, []))
+        total_count = len(self.calendar_data.get(calendar_key, []))
+        selected_count = len(selected)
         
         context_menu = tk.Menu(tree, tearoff=0)
         
@@ -1121,27 +1119,92 @@ class ServiceScheduler:
         os_code = values[1] if len(values) > 1 else ""
         sharepoint_url = self.get_sharepoint_url(os_code)
         
-        context_menu.add_command(label="💬 Chat do Teams", command=self.open_teams_chat)
+        context_menu.add_command(label="Iniciar chat do Teams com Laboratório de Pressão", command=self.open_teams_chat)
         context_menu.add_separator()
         
         if sharepoint_url:
-            context_menu.add_command(label="📁 Abrir SharePoint", command=lambda u=sharepoint_url: webbrowser.open(u))
-            context_menu.add_command(label="📋 Copiar link SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
+            context_menu.add_command(label="Abrir link do SharePoint no navegador", command=lambda u=sharepoint_url: webbrowser.open(u))
+            context_menu.add_command(label="Copiar link SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
         
-        context_menu.add_separator()
-        context_menu.add_command(label="📊 Abrir planilha de cálculo", command=lambda: self.open_teams_link_planilha(None))
+        context_menu.add_command(label="Abrir diretório da planilha de cálculo no Sharepoint", command=lambda: self.open_teams_link_planilha(None))
         
-        if calendar_key and count > 0:
+        if calendar_key and total_count > 0:
             context_menu.add_separator()
-            print('calendar_key',calendar_key)
-            if count == 1:
-                
-                context_menu.add_command(label=f"Reagendar o serviço deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
-            if count > 1:
-                context_menu.add_command(label=f"Reagendar os {count} serviços deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
+            
+            # Reschedule SELECTED services
+            if selected_count == 1:
+                label = f"Reagendar o serviço selecionado"
+            else:
+                label = f"Reagendar os {selected_count} serviços selecionados"
+            
+            context_menu.add_command(label=label,command=lambda t=tree, s=selected: self.reschedule_selected_services(t, s))
+            
+            # Reschedule ALL services (only if selecting all)
+            #if selected_count == total_count and total_count != 1:
+            #    context_menu.add_command(label=f"Reagendar todos os {total_count} serviços deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
         
         context_menu.post(event.x_root, event.y_root)
 
+    def reschedule_selected_services(self, tree, selected_items):
+        """Reschedule only selected services from the popup"""
+        popup = tree.winfo_toplevel()
+        calendar_key = getattr(popup, 'calendar_key', None)
+        
+        if not calendar_key:
+            return
+        
+        all_items = tree.get_children()
+        selected_indices = [all_items.index(item) for item in selected_items]
+        schedule_ids = getattr(popup, 'schedule_ids', [])
+        selected_schedule_ids = [schedule_ids[i] for i in selected_indices if i < len(schedule_ids)]
+        
+        if not selected_schedule_ids:
+            return
+        
+        count = len(selected_schedule_ids)
+        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
+
+        if count == 1:
+            confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar o serviço selecionado de {date_str}?")
+        if count > 1:
+            confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar os {count} serviço selecionado de {date_str}?")
+        
+        if not confirm:
+            return
+        
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn.Open(self.str_conn)
+            
+            id_list = ','.join(str(sid) for sid in selected_schedule_ids)
+            
+            conn.Execute(f"""
+                UPDATE [castro_services].dbo.Service_Schedule
+                SET status = 'PENDING', scheduled_start = NULL, scheduled_end = NULL, updated_at = GETDATE()
+                WHERE id IN ({id_list})
+            """)
+            
+            conn.Execute(f"DELETE FROM [castro_services].dbo.Time_Slots WHERE schedule_id IN ({id_list})")
+            conn.Close()
+            
+            reschedule_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+            self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
+            
+            self.load_calendar_data()
+            self.render_calendar()
+            popup.destroy()
+            
+            if count == 1:
+                self.status_label.config(text=f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M:%S')} às {self.next_end.strftime('%H:%M:%S')}")
+                messagebox.showinfo('Info agendamento',f'Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M:%S')} às {self.next_end.strftime('%H:%M:%S')}')
+            if count > 1:
+                self.status_label.config(text=f"{count} serviços reagendados para a partir de {self.next_start.strftime('%d/%m/%Y')}")
+                messagebox.showinfo('Info agendamento',f'Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M:%S')} às {self.next_end.strftime('%H:%M:%S')}')
+
+            #self.status_label.config(text=f"✅ {count} serviço(s) reagendado(s)!")
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
 
     def open_teams_link_planilha(self, item):
         try:
@@ -1273,7 +1336,7 @@ class ServiceScheduler:
             
         except Exception:
             pass
-    
+
 class ServiceSchedulerLinkedDirect:
     """ ABA: Serviços para Agendamento (Linked Server - 631CP) """
     
@@ -1421,14 +1484,14 @@ class ServiceSchedulerLinkedDirect:
             
             # Build message text
             if is_full_day:
-                msg = f"Bloqueio adicionado:\n\nData: {exception_date_br}\nDia inteiro\Razão: {notes}"
+                msg = f"Bloqueio de agenda adicionado:\n\nData: {exception_date_br}\nDia inteiro\nRazão: {notes}"
             else:
-                msg = f"Bloqueio adicionado:\n\nData: {exception_date_br}\nHorário: {start_time} às {end_time}\Razão: {notes}"
+                msg = f"Bloqueio de agenda adicionado:\n\nData: {exception_date_br}\nHorário: {start_time} às {end_time}\nRazão: {notes}"
             
             messagebox.showinfo("Info agendamento", msg)
             
-            self.status_label.config(text=f"✅ Bloqueio adicionado: {exception_date_br}")
-            self.load_calendar_data()
+            self.status_label.config(text=f"Bloqueio de agenda adicionado em: {exception_date_br} das {start_time} às {end_time}")
+            #self.load_calendar_data()
             self.render_calendar()
             
         except ValueError:
@@ -1436,71 +1499,72 @@ class ServiceSchedulerLinkedDirect:
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao salvar exceção:\n{str(e)}")
 
-    def load_calendar_data(self):
-        """Load all scheduled services grouped by date"""
-        self.calendar_data.clear()
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            
-            sql = """
-                SELECT 
-                    ts.slot_date,
-                    ts.start_time,
-                    ts.end_time,
-                    s.code,
-                    s.specification,
-                    s.description,
-                    s.execution_time_minutes,
-                    ss.notes,
-                    ss.status,
-                    ss.priority,
-                    ss.id as schedule_id
-                FROM [castro_services].dbo.Time_Slots ts
-                JOIN [castro_services].dbo.Service_Schedule ss ON ts.schedule_id = ss.id
-                JOIN [castro_services].dbo.Service_Modes_Local s ON ts.service_id = s.id
-                ORDER BY ts.slot_date, ts.start_time
-            """
-            
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            rs.Open(sql, conn)
-            
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    slot_date = rs.Fields('slot_date').Value
-                    
-                    if isinstance(slot_date, str):
-                        slot_date = datetime.strptime(slot_date, '%Y-%m-%d').date()
-                    elif isinstance(slot_date, datetime):
-                        slot_date = slot_date.date()
-                    
-                    calendar_key = (slot_date.day, slot_date.month, slot_date.year)
-                    
-                    order_data = {
-                        'start_time': rs.Fields('start_time').Value,
-                        'end_time': rs.Fields('end_time').Value,
-                        'code': rs.Fields('code').Value,
-                        'specification': rs.Fields('specification').Value,
-                        'description': rs.Fields('description').Value,
-                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
-                        'notes': rs.Fields('notes').Value,
-                        'status': rs.Fields('status').Value,
-                        'priority': rs.Fields('priority').Value
-                    }
-                    
-                    if calendar_key not in self.calendar_data:
-                        self.calendar_data[calendar_key] = []
-                    self.calendar_data[calendar_key].append(order_data)
-                    
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            
-        except Exception as e:
-            print(f"Error loading calendar data: {e}")
+    #def load_calendar_data(self):
+    #    """Load all scheduled services grouped by date"""
+    #    self.calendar_data.clear()
+    #    
+    #    try:
+    #        conn = win32com.client.Dispatch("ADODB.Connection")
+    #        conn.Open(self.str_conn)
+    #        
+    #        sql = """
+    #            SELECT 
+    #                ts.slot_date,
+    #                ts.start_time,
+    #                ts.end_time,
+    #                s.code,
+    #                s.specification,
+    #                s.description,
+    #                s.execution_time_minutes,
+    #                ss.notes,
+    #                ss.status,
+    #                ss.priority,
+    #                ss.id as schedule_id
+    #            FROM [castro_services].dbo.Time_Slots ts
+    #            JOIN [castro_services].dbo.Service_Schedule ss ON ts.schedule_id = ss.id
+    #            JOIN [castro_services].dbo.Service_Modes_Local s ON ts.service_id = s.id
+    #            ORDER BY ts.slot_date, ts.start_time
+    #        """
+    #        
+    #        rs = win32com.client.Dispatch("ADODB.Recordset")
+    #        rs.Open(sql, conn)
+    #        
+    #        if not rs.EOF:
+    #            rs.MoveFirst()
+    #            while not rs.EOF:
+    #                slot_date = rs.Fields('slot_date').Value
+    #                
+    #                if isinstance(slot_date, str):
+    #                    slot_date = datetime.strptime(slot_date, '%Y-%m-%d').date()
+    #                elif isinstance(slot_date, datetime):
+    #                    slot_date = slot_date.date()
+    #                
+    #                calendar_key = (slot_date.day, slot_date.month, slot_date.year)
+#
+    #                order_data = {
+    #                'start_time': rs.Fields('start_time').Value,
+    #                'end_time': rs.Fields('end_time').Value,
+    #                'code': rs.Fields('code').Value,
+    #                'specification': rs.Fields('specification').Value,
+    #                'description': rs.Fields('description').Value,
+    #                'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
+    #                'notes': rs.Fields('notes').Value,
+    #                'status': rs.Fields('status').Value,
+    #                'priority': rs.Fields('priority').Value,
+    #                'schedule_id': rs.Fields('schedule_id').Value  # ADD THIS LINE
+    #            }
+    #                
+    #                if calendar_key not in self.calendar_data:
+    #                    self.calendar_data[calendar_key] = []
+    #                self.calendar_data[calendar_key].append(order_data)
+    #                
+    #                rs.MoveNext()
+    #        
+    #        rs.Close()
+    #        conn.Close()
+    #        
+    #    except Exception as e:
+    #        print(f"Error loading calendar data: {e}")
     
     def find_next_available_slot(self, from_time, duration_minutes):
         """
@@ -2293,36 +2357,6 @@ class ServiceSchedulerLinkedDirect:
             
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao agendar:\n{str(e)}")
-
-    
-    #def process_fifo(self):
-    #    """Process the FIFO queue"""
-    #    try:
-    #        conn = win32com.client.Dispatch("ADODB.Connection")
-    #        conn.Open(self.str_conn)
-    #        
-    #        rs = win32com.client.Dispatch("ADODB.Recordset")
-    #        rs.Open(
-    #            "SELECT COUNT(*) as cnt FROM [castro_services].dbo.Service_Schedule WHERE status = 'PENDING'",
-    #            conn
-    #        )
-    #        
-    #        pending_count = rs.Fields('cnt').Value if not rs.EOF else 0
-    #        rs.Close()
-    #        
-    #        if pending_count == 0:
-    #            messagebox.showinfo("Aviso", "Nenhum serviço pendente na fila!")
-    #            conn.Close()
-    #            return
-    #        
-    #        conn.Execute("EXEC [castro_services].dbo.sp_ScheduleNextServices @batch_size = 1000")
-    #        conn.Close()
-    #        
-    #        self.status_label.config(text=f"✅ {pending_count} serviço(s) processado(s) com sucesso!")
-    #        
-    #    except Exception as e:
-    #        messagebox.showerror("Erro", f"Falha ao processar fila:\n{str(e)}")
-
  
 class DatabaseViewer6: ### VISTA GERAL
 
