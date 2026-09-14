@@ -42,6 +42,7 @@ STR_CONN = (
     f"User ID=sa;"
     f"Password=Wheelp0p2;"
 )
+
 STR_CONN_LINKED = (
     f"Provider=SQLOLEDB;"
     f"Data Source={ip_linked};"
@@ -104,11 +105,10 @@ def verificar_disponibilidade():
     except Exception:
         return "OFFLINE", "orange"
 
-
 def verificar_disponibilidade3():
     try:
         conn = win32com.client.Dispatch("ADODB.Connection")
-        conn.ConnectionTimeout = 1
+        conn.ConnectionTimeout = 5
         conn.Open(STR_CONN_LINKED)
         conn.Close()
         return "ONLINE", "lime"
@@ -128,8 +128,7 @@ def format_os_code(os_code):
     elif len(os_code) == 3:
         os_code = f"0{os_code}"
         return os_code
-
-
+ 
 class ServiceScheduler:
     """ ABA: Agendamento de Serviços (Calibração FIFO) """
     
@@ -154,18 +153,14 @@ class ServiceScheduler:
         self.update_queue_count()
 
         
-        self.start_auto_refresh()
+        #self.start_auto_refresh()
         #self.load_pending_list()
 
-    def start_auto_refresh(self):
-        """Start periodic calendar refresh every 20 seconds"""
-        self._auto_refresh()
-
-    def _auto_refresh(self):
-        """Internal auto-refresh loop"""
-        self.refresh_calendar()
-        # Schedule next refresh in 5 seconds
-        self.frame_certificados.after(8000, self._auto_refresh)
+    #def start_auto_refresh(self):
+    #    self._auto_refresh()
+    #def _auto_refresh(self):
+    #    self.refresh_calendar()
+    #    self.frame_certificados.after(8000, self._auto_refresh)
 
     def on_tab_changed(self, event):
         """Refresh calendar only when this tab is selected"""
@@ -187,10 +182,199 @@ class ServiceScheduler:
         self.calendar_frame.pack(side='left', fill='both', expand=True)
         
         # Status bar
-        self.status_label = ttk.Label(self.frame_certificados, 
-                                       text="Pronto para agendamento", font=("Segoe UI", 12))
+        self.status_label = ttk.Label(self.frame_certificados, text="Pronto para agendamento", font=("Segoe UI", 12))
         self.status_label.pack(pady=5)
+    def reschedule_day_services_manual(self, calendar_key):
+        """Reschedule services from a day - user picks the new date/time"""
+        if calendar_key not in self.calendar_data:
+            messagebox.showinfo("Aviso", "Nenhum serviço neste dia!")
+            return
+        
+        count = len(self.calendar_data[calendar_key])
+        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
+        
+        if count == 1:
+            confirm = messagebox.askyesno("Info agendamento", 
+                f"Deseja reagendar manualmente o serviço do dia {date_str}?\n\n"
+                f"Você poderá escolher a nova data e horário.")
+        else:
+            confirm = messagebox.askyesno("Info agendamento", 
+                f"Deseja reagendar manualmente os {count} serviços do dia {date_str}?\n\n"
+                f"Você poderá escolher a nova data e horário de início.")
+        
+        if not confirm:
+            return
+        
+        # Open date/time picker popup
+        self._open_manual_reschedule_popup(calendar_key)
 
+
+    def _open_manual_reschedule_popup(self, calendar_key):
+        """Popup for user to select new date and time for rescheduling"""
+        popup = tk.Toplevel(self.frame_certificados)
+        popup.geometry("380x280")
+        popup.minsize(350, 250)
+        popup.configure(bg=self.cor_fundo)
+        popup.title("Reagendamento Manual")
+        
+        count = len(self.calendar_data[calendar_key])
+        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
+        reschedule_date_orig = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+        
+        # Info label
+        tk.Label(popup, text=f"Reagendar {count} serviço(s) de {date_str}",
+                font=('Segoe UI', 10, 'bold'), bg=self.cor_fundo, fg='white').pack(pady=(15, 10))
+        
+        # Date selection
+        tk.Label(popup, text="Nova data (DD/MM/AAAA):", font=('Segoe UI', 9),
+                bg=self.cor_fundo, fg='white').pack(anchor='w', padx=30, pady=(10, 0))
+        
+        date_frame = tk.Frame(popup, bg=self.cor_fundo)
+        date_frame.pack(fill='x', padx=30, pady=(2, 5))
+        
+        tomorrow = datetime.now() + timedelta(days=1)
+        day_var = tk.StringVar(value=tomorrow.strftime('%d'))
+        month_var = tk.StringVar(value=tomorrow.strftime('%m'))
+        year_var = tk.StringVar(value=tomorrow.strftime('%Y'))
+        
+        ttk.Entry(date_frame, textvariable=day_var, width=3).pack(side='left')
+        tk.Label(date_frame, text="/", bg=self.cor_fundo, fg='white').pack(side='left')
+        ttk.Entry(date_frame, textvariable=month_var, width=3).pack(side='left')
+        tk.Label(date_frame, text="/", bg=self.cor_fundo, fg='white').pack(side='left')
+        ttk.Entry(date_frame, textvariable=year_var, width=5).pack(side='left')
+        
+        # Time selection
+        tk.Label(popup, text="Horário de início (HH:MM):", font=('Segoe UI', 9),
+                bg=self.cor_fundo, fg='white').pack(anchor='w', padx=30, pady=(10, 0))
+        
+        time_var = tk.StringVar(value="08:00")
+        ttk.Entry(popup, textvariable=time_var, width=10).pack(anchor='w', padx=30, pady=(2, 5))
+        
+        # Warning
+        tk.Label(popup, text="⚠ Os serviços serão agendados em sequência\n   a partir desta data e horário.",
+                font=('Segoe UI', 8), bg=self.cor_fundo, fg='#FFD700').pack(pady=(10, 5))
+        
+        # Buttons
+        btn_frame = tk.Frame(popup, bg=self.cor_fundo)
+        btn_frame.pack(pady=15)
+        
+        ttk.Button(btn_frame, text=" Confirmar Reagendamento ",
+                command=lambda: self._execute_manual_reschedule(
+                    calendar_key, popup, day_var, month_var, year_var, time_var)
+                ).pack(side='left', padx=5)
+        
+        ttk.Button(btn_frame, text=" Cancelar ", command=popup.destroy).pack(side='left', padx=5)
+
+    def _execute_manual_reschedule(self, calendar_key, popup, day_var, month_var, year_var, time_var):
+        """Execute the manual reschedule with user-selected date/time"""
+        try:
+            # Validate date
+            day = day_var.get().strip().zfill(2)
+            month = month_var.get().strip().zfill(2)
+            year = year_var.get().strip()
+            new_date_str = f"{year}-{month}-{day}"
+            new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+            
+            # Validate time
+            time_str = time_var.get().strip()
+            parts = time_str.split(':')
+            if len(parts) != 2:
+                messagebox.showwarning("Aviso", "Formato de horário inválido! Use HH:MM")
+                return
+            new_time = time(int(parts[0]), int(parts[1]))
+            
+            new_datetime = datetime.combine(new_date, new_time)
+            
+            # Check if date is in the future
+            reschedule_date_orig = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+            #if new_date <= reschedule_date_orig:
+            #    messagebox.showwarning("Aviso", f"A nova data deve ser posterior a {reschedule_date_orig.strftime('%d/%m/%Y')}!")
+            #    return
+            if new_date == reschedule_date_orig:
+                messagebox.showwarning("Aviso", f"A nova data deve diferente de {reschedule_date_orig.strftime('%d/%m/%Y')}!")
+                return
+            
+            popup.destroy()
+            
+            # Now execute the reschedule
+            count = len(self.calendar_data[calendar_key])
+            date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
+            
+            try:
+                conn = win32com.client.Dispatch("ADODB.Connection")
+                conn.Open(self.str_conn)
+                
+                reschedule_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+                date_str_sql = reschedule_date.strftime('%Y-%m-%d')
+                
+                # Get schedule_ids for this date
+                rs = win32com.client.Dispatch("ADODB.Recordset")
+                rs.Open(f"""
+                    SELECT ts.schedule_id
+                    FROM [castro_services].dbo.Time_Slots ts
+                    WHERE ts.slot_date = '{date_str_sql}'
+                """, conn)
+                
+                schedule_ids = []
+                if not rs.EOF:
+                    rs.MoveFirst()
+                    while not rs.EOF:
+                        schedule_ids.append(rs.Fields('schedule_id').Value)
+                        rs.MoveNext()
+                rs.Close()
+                
+                if not schedule_ids:
+                    conn.Close()
+                    return
+                
+                # Delete time slots for this date
+                conn.Execute(f"DELETE FROM [castro_services].dbo.Time_Slots WHERE slot_date = '{date_str_sql}'")
+                
+                # Reset services to PENDING
+                id_list = ','.join(str(sid) for sid in schedule_ids)
+                conn.Execute(f"""
+                    UPDATE [castro_services].dbo.Service_Schedule
+                    SET status = 'PENDING',
+                        scheduled_start = NULL,
+                        scheduled_end = NULL,
+                        updated_at = GETDATE()
+                    WHERE id IN ({id_list})
+                """)
+                
+                conn.Close()
+                
+                # Schedule from user-selected date/time
+                self.next_start, self.next_end = self.schedule_all_pending(from_date=new_datetime)
+                
+                # Refresh
+                self.load_calendar_data()
+                self.refresh_calendar()
+                self.update_queue_count()
+                
+                new_date_br = new_date.strftime('%d/%m/%Y')
+                if count == 1:
+                    #self.status_label.config(text=f"Serviço reagendado para {new_date_br} a partir das {new_time.strftime('%H:%M')}")
+                    messagebox.showinfo('Info agendamento',f"Serviço reagendado para {new_date_br} a partir das {new_time.strftime('%H:%M')}")
+                elif count > 1:
+                    #self.status_label.config(text=f"{count} serviços reagendados para {new_date_br} a partir das {new_time.strftime('%H:%M')}")
+                    messagebox.showinfo('Info agendamento',f"{count} serviços reagendados para {new_date_br} a partir das {new_time.strftime('%H:%M')}")
+            
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
+        
+        except ValueError:
+            messagebox.showwarning("Aviso", "Data ou horário inválido!")
+
+    def extract_code_from_notes(self, notes):
+        if not notes:
+            return ""
+        parts = notes.split(' - ')
+
+        if len(parts) >= 1:
+            os_part = parts[1]
+            return os_part
+        return ""
+    
     def extract_os_from_notes(self, notes):
         """Extract OS code from notes string"""
         if not notes:
@@ -238,7 +422,7 @@ class ServiceScheduler:
                     if start_t and end_t:
                         exceptions.append(f"{start_t}-{end_t}: {notes}")
                     else:
-                        exceptions.append(f"Dia inteiro: {notes}")
+                        exceptions.append(f"08:00-17:00: {notes}")
                     
                     rs.MoveNext()
             
@@ -370,9 +554,8 @@ class ServiceScheduler:
             
         except Exception as e:
             print(f"Error loading calendar data: {e}")
-    
+ 
     def render_calendar(self):
-        
         """Render the monthly calendar view"""
         
         for widget in self.calendar_frame.winfo_children():
@@ -385,40 +568,76 @@ class ServiceScheduler:
         
         meses_pt = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho','Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         
-        # ===== Navigation Header =====
-        nav_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
-        nav_frame.pack(fill='x', pady=(0, 5))
+        # ===== PRELOAD EXCEPTIONS FOR THE VISIBLE MONTH =====
+        exceptions_by_date = {}
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            conn.Open(self.str_conn)
+            
+            first_day = f"{year}-{month:02d}-01"
+            if month == 12:
+                last_day = f"{year+1}-01-01"
+            else:
+                last_day = f"{year}-{month+1:02d}-01"
+            
+            sql = f"""
+                SELECT exception_date, exception_type, start_time, end_time, notes, is_available
+                FROM [castro_services].dbo.Calendar_Exceptions
+                WHERE exception_date >= '{first_day}'
+                AND exception_date < '{last_day}'
+            """
+            rs.Open(sql, conn)
+            
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    exc_date = rs.Fields('exception_date').Value
+                    if isinstance(exc_date, str):
+                        exc_date = datetime.strptime(exc_date, '%Y-%m-%d').date()
+                    elif isinstance(exc_date, datetime):
+                        exc_date = exc_date.date()
+                    
+                    exc_key = (exc_date.day, exc_date.month, exc_date.year)
+                    
+                    start_t = rs.Fields('start_time').Value
+                    end_t = rs.Fields('end_time').Value
+                    is_avail = rs.Fields('is_available').Value
+                    notes = rs.Fields('notes').Value if rs.Fields('notes').Value else ""
+                    
+                    if exc_key not in exceptions_by_date:
+                        exceptions_by_date[exc_key] = []
+                    
+                    exceptions_by_date[exc_key].append({
+                        'start_time': str(start_t)[:5] if start_t else None,
+                        'end_time': str(end_t)[:5] if end_t else None,
+                        'is_available': is_avail,
+                        'notes': notes
+                    })
+                    rs.MoveNext()
+            rs.Close()
+            conn.Close()
+        except Exception as e:
+            print(f"Error loading exceptions: {e}")
         
         # ===== Navigation Header =====
         nav_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
         nav_frame.pack(fill='x', pady=(0, 5))
-
+        
         self.greetings = ttk.Label(nav_frame, text=f"{buenas}", font=("Segoe UI", 10),background='black')
         self.greetings.pack(side="left", padx=5, pady=(0, 0))
         
-        # Row 1: Title
-        title_frame = tk.Frame(nav_frame, bg=self.cor_fundo)
-        title_frame.pack(fill='x')
-
-        #tk.Label(title_frame, text="Serviços de Pressão",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white').pack(side='left', padx=20)
-
-        # Row 2: Navigation
         nav_row = tk.Frame(nav_frame, bg=self.cor_fundo)
         nav_row.pack(fill='x')
 
-        btn_prev = tk.Label(nav_row, text="◀", anchor='center', justify='center',
-                            font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',
-                            cursor='hand2', padx=0)
+        btn_prev = tk.Label(nav_row, text="◀", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
         btn_prev.pack(side='left', padx=5)
         btn_prev.bind('<Button-1>', lambda e: self.change_month(-1))
 
-        month_label = tk.Label(nav_row, text=f"{meses_pt[month-1]} {year}",
-                            font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white')
+        month_label = tk.Label(nav_row, text=f"{meses_pt[month-1]} {year}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white')
         month_label.pack(side='left', padx=5)
 
-        btn_next = tk.Label(nav_row, text="▶", anchor='center', justify='center',
-                            font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',
-                            cursor='hand2', padx=0)
+        btn_next = tk.Label(nav_row, text="▶", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
         btn_next.pack(side='left', padx=5)
         btn_next.bind('<Button-1>', lambda e: self.change_month(1))
 
@@ -453,7 +672,9 @@ class ServiceScheduler:
                     is_today = (current_date == today_date)
                     is_weekend = current_date.weekday() >= 5
                     has_orders = calendar_key in self.calendar_data
+                    has_exceptions = calendar_key in exceptions_by_date
                     
+                    # Background color logic
                     if is_today:
                         bg_color = '#B7D5F5'
                     elif is_weekend:
@@ -463,14 +684,16 @@ class ServiceScheduler:
                     else:
                         bg_color = '#908F8F'
                     
-                    if has_orders and not is_weekend:
-                        day_frame = tk.Frame(week_frame, bg=bg_color, width=120, height=80,bd=1, cursor='hand2')
-                        day_frame.pack(side='left', padx=1, pady=1)
-                        day_frame.pack_propagate(False)
+                    # ALL non-weekend days are clickable (even without services)
+                    is_clickable = not is_weekend
+                    
+                    if is_clickable:
+                        day_frame = tk.Frame(week_frame, bg=bg_color, width=120, height=80, bd=1, cursor='hand2')
                     else:
                         day_frame = tk.Frame(week_frame, bg=bg_color, width=120, height=80, bd=1)
-                        day_frame.pack(side='left', padx=1, pady=1)
-                        day_frame.pack_propagate(False)
+                    
+                    day_frame.pack(side='left', padx=1, pady=1)
+                    day_frame.pack_propagate(False)
                     
                     day_num_frame = tk.Frame(day_frame, bg=bg_color)
                     day_num_frame.pack(fill='x', padx=2, pady=1)
@@ -479,19 +702,30 @@ class ServiceScheduler:
                     day_label = tk.Label(day_num_frame, text=str(day),font=('Segoe UI', 9, 'bold'),bg=bg_color, fg=fg_day, anchor='w')
                     day_label.pack(side='left')
                     
-                    if has_orders and not is_weekend:
+                    # Show order count badge
+                    if has_orders:
                         count = len(self.calendar_data[calendar_key])
                         badge = tk.Label(day_num_frame, text=str(count),font=('Segoe UI', 8, 'bold'),bg='#2462D2', fg='white', width=3, height=1)
                         badge.pack(side='right')
-                    
-                    if has_orders and not is_weekend:
+                        
+                    # Show exception indicator
+                    # Show exception indicator (only if there's a non-intervalinho exception)
+                    if has_exceptions:
+                        exc_list = exceptions_by_date[calendar_key]
+                        # Check if there's any exception that is NOT just 'intervalinho'
+                        has_real_exception = any('intervalinho' not in str(exc.get('notes', '')).lower()for exc in exc_list)
+                        
+                        if has_real_exception:
+                            exc_indicator = tk.Label(day_num_frame, text="⚠", font=('Segoe UI', 8), bg=bg_color, fg="#E64848")
+                            exc_indicator.pack(side='right', padx=(0, 2))
+
+                    if has_orders:
                         unique_items = []
                         seen = set()
                         for order in self.calendar_data[calendar_key]:
                             result = self.extract_item_from_notes(order.get('notes', ''))
-
                             if isinstance(result, tuple) and len(result) >= 2:
-                                item_code = result[0]  # The Item code
+                                item_code = result[0]
                             else:
                                 item_code = str(result)[:15] if result else ""
                             
@@ -508,10 +742,16 @@ class ServiceScheduler:
                             more_label = tk.Label(day_frame,text=f"+{len(unique_items) - 4} mais...",font=('Segoe UI', 6), bg=bg_color,fg="#4A4949", anchor='w')
                             more_label.pack(fill='x', padx=3)
                     
-                    # Bind left-click to show orders
-                    if has_orders and not is_weekend:
+                    # Show exception preview for days without services
+                    #elif has_exceptions and not has_orders:
+                    #    exc_list = exceptions_by_date[calendar_key]
+                    #    exc_preview = exc_list[0]['notes'][:25] if exc_list[0]['notes'] else "Bloqueio"
+                    #    preview = tk.Label(day_frame, text=exc_preview, font=('Segoe UI', 7), bg=bg_color, fg='#E64848', anchor='w', justify='left', cursor='hand2')
+                    #    preview.pack(fill='x', padx=3)
+                    
+                    # Bind clicks for ALL non-weekend days
+                    if is_clickable:
                         day_frame.bind('<Button-1>', lambda e, key=calendar_key: self.show_day_orders(key))
-                        # Bind right-click for context menu
                         day_frame.bind('<Button-3>', lambda e, key=calendar_key: self.show_day_context_menu(e, key))
                         for child in day_frame.winfo_children():
                             child.bind('<Button-1>', lambda e, key=calendar_key: self.show_day_orders(key))
@@ -520,15 +760,11 @@ class ServiceScheduler:
         btn_today = ttk.Button(grid_frame, text="Hoje", command=self.go_to_today, cursor='hand2')
         btn_today.pack(side="left", padx=5)
         
-        #self.buscar = ttk.Button(nav_frame, text="Limpar agenda", command=self.clear_all_scheduled, cursor='hand2')
-        #self.buscar.pack(side="left", padx=5)
-        
         btn_refresh = ttk.Button(grid_frame, text="Atualizar", command=self.refresh_calendar, cursor='hand2')
         btn_refresh.pack(side="left", padx=5)
         
         self.buscar = ttk.Button(grid_frame, text=" Limpar agenda ", command=self.clear_all_scheduled, cursor='hand2')
         self.buscar.pack(side="left", padx=5)
-        
 
     def extract_item_from_notes(self, notes):
         """Extract item code from notes string"""
@@ -539,7 +775,7 @@ class ServiceScheduler:
             
             return parts[0], parts [1], parts [2]
         return notes[:15]  
-
+    
     def show_day_context_menu(self, event, calendar_key):
         context_menu = tk.Menu(self.calendar_frame, tearoff=0)
         
@@ -548,20 +784,76 @@ class ServiceScheduler:
         
         if count == 1:
             context_menu.add_command(label=f"Ver serviço", command=lambda k=calendar_key: self.show_day_orders(k))
+            context_menu.add_separator()
         elif count > 1:
             context_menu.add_command(label=f"Ver serviços", command=lambda k=calendar_key: self.show_day_orders(k))
+            context_menu.add_separator()
+            
+        exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+        exceptions = self.load_exceptions_for_date(exc_date)
         
-        context_menu.add_separator()
-        
-        if count == 1:
-            context_menu.add_command(label=f"Reagendar o serviço deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
-        else:
-            context_menu.add_command(label=f"Reagendar todos os {count} serviços deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
-        
-        context_menu.add_separator()
         context_menu.add_command(label="Iniciar chat do Teams com Laboratório de Pressão", command=self.open_teams_chat)
+
+        if exceptions:
+            context_menu.add_separator()
+            if len(exceptions) == 1:
+                context_menu.add_command(label=f"Remover bloqueio de agenda deste dia",command=lambda k=calendar_key: self.remove_day_exceptions(k))
+            if len(exceptions) > 1:
+                context_menu.add_command(label=f"Remover bloqueios de agenda deste dia",command=lambda k=calendar_key: self.remove_day_exceptions(k))
+        context_menu.add_separator()
+        if count == 1:
+            context_menu.add_command(label=f"Reagendar o serviço para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
+            context_menu.add_command(label=f"Reagendar o serviço automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
+        elif count > 1:
+            context_menu.add_command(label=f"Reagendar todos os {count} serviços deste dia para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
+            context_menu.add_command(label=f"Reagendar todos os {count} serviços deste dia automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
         
         context_menu.post(event.x_root, event.y_root)
+
+    def remove_day_exceptions(self, calendar_key):
+        """Remove all exceptions for a specific day"""
+        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
+        
+        exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+        exceptions = self.load_exceptions_for_date(exc_date)
+        count = len(exceptions)
+
+        if count > 0 and count < 3:
+            confirm = messagebox.askyesno("Info agendamento",f"Deseja remover este bloqueio de agenda do dia {date_str}?")
+
+        elif count > 2:
+            confirm = messagebox.askyesno("Info agendamento",f"Deseja remover os {count-1} bloqueios do dia {date_str}?")
+        
+        if not confirm:
+            return
+        
+        try:
+
+            if count == 1:
+                messagebox.showerror("Erro kkkkkkkkkkk", f"Falha ao remover bloqueios:\n\nalá tentou remover o bloqueio 'Intervalinho' kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
+                return
+
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn.Open(self.str_conn)
+            
+            date_str_sql = exc_date.strftime('%Y-%m-%d')
+            #conn.Execute(f"DELETE FROM [castro_services].dbo.Calendar_Exceptions WHERE exception_date = '{date_str_sql}'")
+            conn.Execute(f"""DELETE FROM [castro_services].dbo.Calendar_Exceptions WHERE exception_date = '{date_str_sql}'AND (notes IS NULL OR notes NOT LIKE '%Intervalinho%')""")
+            conn.Close()
+            
+            self.load_calendar_data()
+            self.render_calendar()
+            
+            if count == 1:
+                self.status_label.config(text=f"Bloqueio de agenda removido de {date_str}")
+                messagebox.showinfo("Sucesso", f"Bloqueio de agenda removido de {date_str}")
+
+            elif count > 1:
+                self.status_label.config(text=f"{count-1} bloqueio(s) de agenda removido(s) de {date_str}")
+                messagebox.showinfo("Sucesso", f"{count-1} bloqueio(s) de agenda removido(s) de {date_str}")
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao remover bloqueios:\n{str(e)}")
 
     def reschedule_day_services(self, calendar_key):
         """Reschedule all services from a specific day to future dates only"""
@@ -571,8 +863,10 @@ class ServiceScheduler:
         
         count = len(self.calendar_data[calendar_key])
         date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        
-        confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar {count} serviço(s) do dia {date_str}?\n\n")
+        if count == 1:
+            confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar o serviço do dia {date_str}?\n\n")
+        elif count > 1:
+            confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar os {count} serviços do dia {date_str}?\n\n")
         
         if not confirm:
             return
@@ -630,12 +924,12 @@ class ServiceScheduler:
             self.update_queue_count()
 
             if count == 1 :
-                self.status_label.config(text=f"{count} serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}")    
-                messagebox.showinfo('Info agendamento',f'{count} serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}')
+                self.status_label.config(text=f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}")    
+                messagebox.showinfo('Info agendamento',f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}")
 
             if count > 1:
-                self.status_label.config(text=f"Serviço reagendado para a partir de {self.next_start.strftime('%d/%m/%Y')}")
-                messagebox.showinfo('Info agendamento',f'Serviço reagendado para a partir de {self.next_start.strftime('%d/%m/%Y')}')
+                self.status_label.config(text=f"{count} serviços reagendados para a partir de {self.next_start.strftime('%d/%m/%Y')}")
+                messagebox.showinfo('Info agendamento',f"{count} serviços reagendados para a partir de {self.next_start.strftime('%d/%m/%Y')}")
 
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
@@ -998,6 +1292,7 @@ class ServiceScheduler:
         self.render_calendar()
         self.update_queue_count()
         #self.load_pending_list()
+
     def show_day_orders(self, calendar_key):
         
         popup = tk.Toplevel(self.frame_certificados)
@@ -1006,92 +1301,301 @@ class ServiceScheduler:
         popup.configure(bg=self.cor_fundo)
         popup.calendar_key = calendar_key
 
-        if calendar_key not in self.calendar_data:
-            return
-        
-        orders = self.calendar_data[calendar_key]
         date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        
         popup.title(f"Serviços - {date_str} (Laboratório de Pressão)")
         
+        orders = self.calendar_data.get(calendar_key, [])
         popup.schedule_ids = [o.get('schedule_id') for o in orders]
-        # ===== TOP FRAME =====
-        top_frame = tk.Frame(popup, bg=self.cor_fundo)
-        top_frame.pack(fill='x', padx=10, pady=(10, 0))
         
-        #tk.Label(top_frame, text=f"Serviços agendados para {date_str}",font=('Segoe UI', 10, 'bold'), bg=self.cor_fundo, fg='white').pack(side='left')
+        has_orders = len(orders) > 0
         
-        # Treeview
-        tree_frame = ttk.Frame(popup)
-        tree_frame.pack(pady=10, padx=10, expand=True, fill='both')
-        
-        tree_scroll = ttk.Scrollbar(tree_frame)
-        tree_scroll.pack(side='right', fill='y')
-        
-        columns = ("Horário", "OS", "Código", "Serviço", "Descrição", "Duração", "Status")
-        tree = ttk.Treeview(tree_frame, columns=columns, show="headings",
-                            yscrollcommand=tree_scroll.set, selectmode="extended")
-        tree_scroll.config(command=tree.yview)
-        
-        tree.heading("Horário", text="Horário")
-        tree.heading("OS", text="OS")
-        tree.heading("Código", text="Código")
-        tree.heading("Serviço", text="Serviço")
-        tree.heading("Descrição", text="Descrição")
-        tree.heading("Duração", text="Duração")
-        tree.heading("Status", text="Status")
-        
-        tree.column("Horário", width=100)
-        tree.column("OS", width=80)
-        tree.column("Código", width=70)
-        tree.column("Serviço", width=150)
-        tree.column("Descrição", width=150)
-        tree.column("Duração", width=55)
-        tree.column("Status", width=70)
-        
-        tree.pack(expand=True, fill='both')
-        
-        tree.tag_configure('urgente', background='#FFD9D9')
-        tree.tag_configure('normal', background='#FFFFFF')
-        
-        for order in orders:
-            start_str = str(order['start_time'])[:5] if order['start_time'] else "--:--"
-            end_str = str(order['end_time'])[:5] if order['end_time'] else "--:--"
-            os_code = self.extract_os_from_notes(order.get('notes', ''))
+        if has_orders:
+            top_frame = tk.Frame(popup, bg=self.cor_fundo)
+            top_frame.pack(fill='x', padx=10, pady=(10, 0))
             
-            is_urgent = order.get('priority', 10) <= 5
-            tag = 'urgente' if is_urgent else 'normal'
+            tree_frame = ttk.Frame(popup)
+            tree_frame.pack(pady=10, padx=10, expand=True, fill='both')
             
-            tree.insert("", "end", values=(
-                f"{start_str} - {end_str}",
-                os_code,
-                order['code'],
-                order['specification'],
-                order['description'],
-                f"{order['execution_time_minutes']} min",
-                order['status']
-            ), tags=(tag,))
-        # Load and display exceptions for this date
-
+            tree_scroll = ttk.Scrollbar(tree_frame)
+            tree_scroll.pack(side='right', fill='y')
+            
+            columns = ("Horário", "OS", "Item", "Serviço", "Descrição", "Duração", "Código")
+            tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, selectmode="extended")
+            tree_scroll.config(command=tree.yview)
+            
+            tree.heading("Horário", text="Horário")
+            tree.heading("OS", text="OS")
+            tree.heading("Item", text="Item")
+            tree.heading("Serviço", text="Serviço")
+            tree.heading("Descrição", text="Descrição")
+            tree.heading("Duração", text="Duração")
+            tree.heading("Código", text="Código")
+            
+            tree.column("Horário", width=100)
+            tree.column("OS", width=80)
+            tree.column("Item", width=70)
+            tree.column("Serviço", width=150)
+            tree.column("Descrição", width=150)
+            tree.column("Duração", width=55)
+            tree.column("Código", width=70)
+            
+            tree.pack(expand=True, fill='both')
+            
+            tree.tag_configure('urgente', background='#FFD9D9')
+            tree.tag_configure('normal', background='#FFFFFF')
+            
+            for order in orders:
+                start_str = str(order['start_time'])[:5] if order['start_time'] else "--:--"
+                end_str = str(order['end_time'])[:5] if order['end_time'] else "--:--"
+                code = self.extract_code_from_notes(order.get('notes', ''))
+                os_code = self.extract_os_from_notes(order.get('notes', ''))
+                
+                is_urgent = order.get('priority', 10) <= 5
+                tag = 'urgente' if is_urgent else 'normal'
+                
+                tree.insert("", "end", values=(
+                    f"{start_str} - {end_str}",
+                    os_code,
+                    code,
+                    order['specification'],
+                    order['description'],
+                    f"{order['execution_time_minutes']} min",
+                    order['code']
+                ), tags=(tag,))
+        else:
+            tree = None
+            msg_frame = tk.Frame(popup, bg=self.cor_fundo)
+            msg_frame.pack(expand=True)
+            tk.Label(msg_frame, text="Nenhum serviço agendado para este dia", font=('Segoe UI', 11), bg=self.cor_fundo, fg='#B7D5F5').pack()
+        
+        # Load and display exceptions
         exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-        exceptions = self.load_exceptions_for_date(exc_date)
+        exceptions_raw = self.load_exceptions_for_date_raw(exc_date)
 
-        if exceptions:
+        if exceptions_raw:
             exc_frame = tk.Frame(popup, bg=self.cor_fundo)
             exc_frame.pack(fill='x', padx=10, pady=(0, 5))
             
-            tk.Label(exc_frame, text="Bloqueios de Agenda:", font=('Segoe UI', 9, 'bold'),bg=self.cor_fundo, fg='#FFD700').pack(anchor='w')
+            tk.Label(exc_frame, text="Bloqueios de Agenda:", font=('Segoe UI', 9, 'bold'), bg=self.cor_fundo, fg='#FFD700').pack(anchor='w')
             
-            for exc in exceptions:
-                tk.Label(exc_frame, text=f"  ⛔ {exc}", font=('Segoe UI', 8),bg=self.cor_fundo, fg='#FF9999').pack(anchor='w')
+            for i, exc in enumerate(exceptions_raw):
+                exc_text = self._format_exception_text(exc)
+                lbl = tk.Label(exc_frame, text=f"  ⛔ {exc_text}", font=('Segoe UI', 8),bg=self.cor_fundo, fg='#FF9999', cursor='hand2')
+                lbl.pack(anchor='w')
                 
+                # Bind right-click to remove this specific exception
+                lbl.bind('<Button-3>', lambda e, idx=i: self._show_exception_context_menu(e, exc_frame, idx, exc_date, exceptions_raw, popup))
+                lbl.bind('<Enter>', lambda e, l=lbl: l.configure(bg='#3A3A5C'))
+                lbl.bind('<Leave>', lambda e, l=lbl: l.configure(bg=self.cor_fundo))
+        
+        # Buttons at bottom
         btn_frame = tk.Frame(popup, bg=self.cor_fundo)
         btn_frame.pack(fill='x', padx=10, pady=(5, 10))
         
-        ttk.Button(btn_frame, text="Inciar chat do Teams com Laboratório de Pressão", command=self.open_teams_chat, cursor='hand2').pack(side='left', padx=5)
+        ttk.Button(btn_frame, text="Iniciar chat do Teams com Laboratório de Pressão",command=self.open_teams_chat, cursor='hand2').pack(side='left', padx=5)
         
-        # Context menu
-        tree.bind('<Button-3>', lambda e, t=tree: self.show_popup_context_menu(e, t))
+        if tree:
+            tree.bind('<Button-3>', lambda e, t=tree: self.show_popup_context_menu(e, t))
+
+
+    def load_exceptions_for_date_raw(self, check_date):
+        """Load calendar exceptions for a specific date - returns raw data"""
+        try:
+            
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            date_str = check_date.strftime('%Y-%m-%d') if isinstance(check_date, date) else str(check_date)
+            
+            sql = f"""
+                SELECT id, exception_type, start_time, end_time, notes
+                FROM [castro_services].dbo.Calendar_Exceptions
+                WHERE exception_date = '{date_str}'
+                AND is_available = 0
+            """
+            
+            rs.Open(sql, conn)
+            
+            exceptions = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    start_t = rs.Fields('start_time').Value
+                    end_t = rs.Fields('end_time').Value
+                    
+                    exceptions.append({
+                        'id': rs.Fields('id').Value,
+                        'exception_type': rs.Fields('exception_type').Value,
+                        'start_time': str(start_t)[:5] if start_t else None,
+                        'end_time': str(end_t)[:5] if end_t else None,
+                        'notes': rs.Fields('notes').Value if rs.Fields('notes').Value else ""
+                    })
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            return exceptions
+            
+        except Exception as e:
+            print(f"Error loading exceptions: {e}")
+            return []
+
+
+    def _format_exception_text(self, exc):
+        """Format exception for display"""
+        if exc['start_time'] and exc['end_time']:
+            return f"{exc['start_time']}-{exc['end_time']}: {exc['notes']}"
+        else:
+            return f"Dia inteiro: {exc['notes']}"
+
+
+    def _show_exception_context_menu(self, event, parent_frame, exc_index, exc_date, exceptions_raw, popup):
+        """Context menu for an individual exception label"""
+        exc = exceptions_raw[exc_index]
+        bool_intervalinho = False
+        # Don't allow removal of 'intervalinho'
+        if 'intervalinho' in str(exc.get('notes', '')).lower():
+            #messagebox.showerror("Erro kkkkkkkkkkk", f"Falha ao remover bloqueios:\n\nalá tentou remover o bloqueio 'Intervalinho' kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
+            bool_intervalinho = True
+            return
+        
+        context_menu = tk.Menu(parent_frame, tearoff=0)
+        
+        exc_text = self._format_exception_text(exc)
+        context_menu.add_command(label=f"Remover bloqueio de agenda '{exc_text[:50]}'", command=lambda: self._remove_single_exception(exc['id'], exc_date, popup,bool_intervalinho))
+        
+        context_menu.post(event.x_root, event.y_root)
+
+
+    def _remove_single_exception(self, exception_id, exc_date, popup,bool_intervalinho):
+        """Remove a single exception by ID"""
+        try:
+            if bool_intervalinho == True:
+
+                messagebox.showerror("Erro kkkkkkkkkkk", f"Falha ao remover bloqueios:\n\nalá tentou remover o bloqueio 'Intervalinho' kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
+                return
+            
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn.Open(self.str_conn)
+            
+            conn.Execute(f"DELETE FROM [castro_services].dbo.Calendar_Exceptions WHERE id = {exception_id}")
+            conn.Close()
+            
+            self.load_calendar_data()
+            self.render_calendar()
+            
+            # Refresh the popup by reopening with the same calendar_key
+            if popup and popup.winfo_exists():
+                calendar_key = getattr(popup, 'calendar_key', None)
+                if calendar_key:
+                    for widget in popup.winfo_children():
+                        widget.destroy()
+                    # Re-render the popup content
+                    self._refresh_popup_content(popup, calendar_key)
+            
+            self.status_label.config(text="Bloqueio de agenda removido com sucesso!")
+            messagebox.showinfo('Info agendamento','Bloqueio de agenda removido com sucesso!')
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao remover bloqueio:\n{str(e)}")
+
+
+    def _refresh_popup_content(self, popup, calendar_key):
+        """Refresh the popup content after removing an exception"""
+        popup.calendar_key = calendar_key
+        
+        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
+        popup.title(f"Serviços - {date_str} (Laboratório de Pressão)")
+        
+        orders = self.calendar_data.get(calendar_key, [])
+        popup.schedule_ids = [o.get('schedule_id') for o in orders]
+        
+        has_orders = len(orders) > 0
+        
+        if has_orders:
+            tree_frame = ttk.Frame(popup)
+            tree_frame.pack(pady=10, padx=10, expand=True, fill='both')
+            
+            tree_scroll = ttk.Scrollbar(tree_frame)
+            tree_scroll.pack(side='right', fill='y')
+            
+            columns = ("Horário", "OS", "Item", "Serviço", "Descrição", "Duração", "Código")
+            tree = ttk.Treeview(tree_frame, columns=columns, show="headings",
+                                yscrollcommand=tree_scroll.set, selectmode="extended")
+            tree_scroll.config(command=tree.yview)
+            
+            tree.heading("Horário", text="Horário")
+            tree.heading("OS", text="OS")
+            tree.heading("Item", text="Item")
+            tree.heading("Serviço", text="Serviço")
+            tree.heading("Descrição", text="Descrição")
+            tree.heading("Duração", text="Duração")
+            tree.heading("Código", text="Código")
+            
+            tree.column("Horário", width=100)
+            tree.column("OS", width=80)
+            tree.column("Item", width=70)
+            tree.column("Serviço", width=150)
+            tree.column("Descrição", width=150)
+            tree.column("Duração", width=55)
+            tree.column("Código", width=70)
+            
+            tree.pack(expand=True, fill='both')
+            
+            tree.tag_configure('urgente', background='#FFD9D9')
+            tree.tag_configure('normal', background='#FFFFFF')
+            
+            for order in orders:
+                start_str = str(order['start_time'])[:5] if order['start_time'] else "--:--"
+                end_str = str(order['end_time'])[:5] if order['end_time'] else "--:--"
+                code = self.extract_code_from_notes(order.get('notes', ''))
+                os_code = self.extract_os_from_notes(order.get('notes', ''))
+                
+                is_urgent = order.get('priority', 10) <= 5
+                tag = 'urgente' if is_urgent else 'normal'
+                
+                tree.insert("", "end", values=(
+                    f"{start_str} - {end_str}",
+                    os_code,
+                    code,
+                    order['specification'],
+                    order['description'],
+                    f"{order['execution_time_minutes']} min",
+                    order['code']
+                ), tags=(tag,))
+        
+        # Reload exceptions
+        exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
+        exceptions_raw = self.load_exceptions_for_date_raw(exc_date)
+
+        if exceptions_raw:
+            exc_frame = tk.Frame(popup, bg=self.cor_fundo)
+            exc_frame.pack(fill='x', padx=10, pady=(0, 5))
+            
+            tk.Label(exc_frame, text="Bloqueios de Agenda:", font=('Segoe UI', 9, 'bold'), bg=self.cor_fundo, fg='#FFD700').pack(anchor='w')
+            
+            for i, exc in enumerate(exceptions_raw):
+                exc_text = self._format_exception_text(exc)
+                lbl = tk.Label(exc_frame, text=f"  ⛔ {exc_text}", font=('Segoe UI', 8),
+                            bg=self.cor_fundo, fg='#FF9999', cursor='hand2')
+                lbl.pack(anchor='w')
+                
+                lbl.bind('<Button-3>', lambda e, idx=i: self._show_exception_context_menu(e, exc_frame, idx, exc_date, exceptions_raw, popup))
+                lbl.bind('<Enter>', lambda e, l=lbl: l.configure(bg='#3A3A5C'))
+                lbl.bind('<Leave>', lambda e, l=lbl: l.configure(bg=self.cor_fundo))
+        
+        # Buttons
+        btn_frame = tk.Frame(popup, bg=self.cor_fundo)
+        btn_frame.pack(fill='x', padx=10, pady=(5, 10))
+        
+        ttk.Button(btn_frame, text="Iniciar chat do Teams com Laboratório de Pressão",
+                command=self.open_teams_chat, cursor='hand2').pack(side='left', padx=5)
+        
+        if has_orders:
+            tree.bind('<Button-3>', lambda e, t=tree: self.show_popup_context_menu(e, t))
 
     def get_sharepoint_url(self, os_code):
         if not os_code:
@@ -1123,8 +1627,8 @@ class ServiceScheduler:
         context_menu.add_separator()
         
         if sharepoint_url:
-            context_menu.add_command(label="Abrir link do SharePoint no navegador", command=lambda u=sharepoint_url: webbrowser.open(u))
-            context_menu.add_command(label="Copiar link SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
+            context_menu.add_command(label="Abrir link do Sharepoint no navegador", command=lambda u=sharepoint_url: webbrowser.open(u))
+            context_menu.add_command(label="Copiar link do Sharepoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
         
         context_menu.add_command(label="Abrir diretório da planilha de cálculo no Sharepoint", command=lambda: self.open_teams_link_planilha(None))
         
@@ -1133,16 +1637,15 @@ class ServiceScheduler:
             
             # Reschedule SELECTED services
             if selected_count == 1:
-                label = f"Reagendar o serviço selecionado"
+                label = f"Reagendar o serviço selecionado automaticamente"
+                label2 = f"Reagendar o serviço selecionado para um dia específico"
             else:
-                label = f"Reagendar os {selected_count} serviços selecionados"
+                label = f"Reagendar os {selected_count} serviços selecionados automaticamente"
+                label2 = f"Reagendar os {selected_count} serviços selecionados para um dia específico"
             
+            context_menu.add_command(label=label2, command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
             context_menu.add_command(label=label,command=lambda t=tree, s=selected: self.reschedule_selected_services(t, s))
             
-            # Reschedule ALL services (only if selecting all)
-            #if selected_count == total_count and total_count != 1:
-            #    context_menu.add_command(label=f"Reagendar todos os {total_count} serviços deste dia",command=lambda k=calendar_key: self.reschedule_day_services(k))
-        
         context_menu.post(event.x_root, event.y_root)
 
     def reschedule_selected_services(self, tree, selected_items):
@@ -1167,7 +1670,7 @@ class ServiceScheduler:
         if count == 1:
             confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar o serviço selecionado de {date_str}?")
         if count > 1:
-            confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar os {count} serviço selecionado de {date_str}?")
+            confirm = messagebox.askyesno("Info agendamento",f"Deseja reagendar os {count} serviços selecionados de {date_str}?")
         
         if not confirm:
             return
@@ -1195,11 +1698,11 @@ class ServiceScheduler:
             popup.destroy()
             
             if count == 1:
-                self.status_label.config(text=f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M:%S')} às {self.next_end.strftime('%H:%M:%S')}")
-                messagebox.showinfo('Info agendamento',f'Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M:%S')} às {self.next_end.strftime('%H:%M:%S')}')
-            if count > 1:
+                self.status_label.config(text=f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}")
+                messagebox.showinfo('Info agendamento',f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}")
+            elif count > 1:
                 self.status_label.config(text=f"{count} serviços reagendados para a partir de {self.next_start.strftime('%d/%m/%Y')}")
-                messagebox.showinfo('Info agendamento',f'Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M:%S')} às {self.next_end.strftime('%H:%M:%S')}')
+                messagebox.showinfo('Info agendamento',f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}")
 
             #self.status_label.config(text=f"✅ {count} serviço(s) reagendado(s)!")
             
@@ -1336,7 +1839,7 @@ class ServiceScheduler:
             
         except Exception:
             pass
-
+    
 class ServiceSchedulerLinkedDirect:
     """ ABA: Serviços para Agendamento (Linked Server - 631CP) """
     
@@ -1490,82 +1993,15 @@ class ServiceSchedulerLinkedDirect:
             
             messagebox.showinfo("Info agendamento", msg)
             
-            self.status_label.config(text=f"Bloqueio de agenda adicionado em: {exception_date_br} das {start_time} às {end_time}")
+            self.status_label.config(text=f"Bloqueio de calendário adicionado em: {exception_date_br} das {start_time} às {end_time}")
             #self.load_calendar_data()
-            self.render_calendar()
+            #self.render_calendar()
             
         except ValueError:
             messagebox.showwarning("Aviso", "Data inválida!")
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao salvar exceção:\n{str(e)}")
+            messagebox.showerror("Erro", f"Falha ao salvar Bloqueio de Calendário:\n{str(e)}")
 
-    #def load_calendar_data(self):
-    #    """Load all scheduled services grouped by date"""
-    #    self.calendar_data.clear()
-    #    
-    #    try:
-    #        conn = win32com.client.Dispatch("ADODB.Connection")
-    #        conn.Open(self.str_conn)
-    #        
-    #        sql = """
-    #            SELECT 
-    #                ts.slot_date,
-    #                ts.start_time,
-    #                ts.end_time,
-    #                s.code,
-    #                s.specification,
-    #                s.description,
-    #                s.execution_time_minutes,
-    #                ss.notes,
-    #                ss.status,
-    #                ss.priority,
-    #                ss.id as schedule_id
-    #            FROM [castro_services].dbo.Time_Slots ts
-    #            JOIN [castro_services].dbo.Service_Schedule ss ON ts.schedule_id = ss.id
-    #            JOIN [castro_services].dbo.Service_Modes_Local s ON ts.service_id = s.id
-    #            ORDER BY ts.slot_date, ts.start_time
-    #        """
-    #        
-    #        rs = win32com.client.Dispatch("ADODB.Recordset")
-    #        rs.Open(sql, conn)
-    #        
-    #        if not rs.EOF:
-    #            rs.MoveFirst()
-    #            while not rs.EOF:
-    #                slot_date = rs.Fields('slot_date').Value
-    #                
-    #                if isinstance(slot_date, str):
-    #                    slot_date = datetime.strptime(slot_date, '%Y-%m-%d').date()
-    #                elif isinstance(slot_date, datetime):
-    #                    slot_date = slot_date.date()
-    #                
-    #                calendar_key = (slot_date.day, slot_date.month, slot_date.year)
-#
-    #                order_data = {
-    #                'start_time': rs.Fields('start_time').Value,
-    #                'end_time': rs.Fields('end_time').Value,
-    #                'code': rs.Fields('code').Value,
-    #                'specification': rs.Fields('specification').Value,
-    #                'description': rs.Fields('description').Value,
-    #                'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
-    #                'notes': rs.Fields('notes').Value,
-    #                'status': rs.Fields('status').Value,
-    #                'priority': rs.Fields('priority').Value,
-    #                'schedule_id': rs.Fields('schedule_id').Value  # ADD THIS LINE
-    #            }
-    #                
-    #                if calendar_key not in self.calendar_data:
-    #                    self.calendar_data[calendar_key] = []
-    #                self.calendar_data[calendar_key].append(order_data)
-    #                
-    #                rs.MoveNext()
-    #        
-    #        rs.Close()
-    #        conn.Close()
-    #        
-    #    except Exception as e:
-    #        print(f"Error loading calendar data: {e}")
-    
     def find_next_available_slot(self, from_time, duration_minutes):
         """
         Find next available time slot starting from `from_time`
