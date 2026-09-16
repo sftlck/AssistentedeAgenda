@@ -55,8 +55,7 @@ LABS = {
     'CDB': {'name': 'Metrologia por Coordenadas',    'sector_id': 11,    'teams_chat_id': '716ff922fa584a2582ecb48e509edc2e',    'sharepoint_planilha': '',},
 
     'CE': {'name':  'Eletricidade',                  'sector_id': 2029,  'teams_chat_id': '680cba2db76043939995da4b21cfd11c',    'sharepoint_planilha': 'https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Relat%C3%B3rios%20e%20Registros/Lab.%20Eletricidade,%20Tempo%20e%20Frequ%C3%AAncia',},
-    'FQ': {'name':  'Tempo e Frequência',            'sector_id': 2030,  'teams_chat_id': '680cba2db76043939995da4b21cfd11c',    'sharepoint_planilha': 'https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Relat%C3%B3rios%20e%20Registros/Lab.%20Eletricidade,%20Tempo%20e%20Frequ%C3%AAncia',},
-    'CS': {'name':  'Tempo e Frequência',            'sector_id': 2030,  'teams_chat_id': '680cba2db76043939995da4b21cfd11c',    'sharepoint_planilha': 'https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Relat%C3%B3rios%20e%20Registros/Lab.%20Eletricidade,%20Tempo%20e%20Frequ%C3%AAncia',},
+    'TF': {'name':  'Tempo e Frequência',            'sector_id': 2030,  'teams_chat_id': '680cba2db76043939995da4b21cfd11c',    'sharepoint_planilha': 'https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Relat%C3%B3rios%20e%20Registros/Lab.%20Eletricidade,%20Tempo%20e%20Frequ%C3%AAncia',},
 
     'CM': {'name':  'Massa',                         'sector_id': 6,     'teams_chat_id': '474353252d224d7caf749a4b5301c4d8',    'sharepoint_planilha': '',},
     'CP': {'name':  'Pressão',                       'sector_id': 7,     'teams_chat_id': 'fc9176a569904180bbfa3eeb1bd52651',    'sharepoint_planilha': 'https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Relat%C3%B3rios%20e%20Registros/Laborat%C3%B3rio%20de%20Press%C3%A3o',},
@@ -103,20 +102,21 @@ buenas = random.choice(greetings)
 
 def _from_rgb(rgb): return "#%02x%02x%02x" % rgb
 
-def verificar_disponibilidade():
-    try:
-        conn = win32com.client.Dispatch("ADODB.Connection")
-        conn.ConnectionTimeout = 1
-        conn.Open(STR_CONN)
-        conn.Close()
-        return "ONLINE", "lime"
-    except Exception:
-        return "OFFLINE", "orange"
+#ef verificar_disponibilidade():
+#   try:
+#       conn = win32com.client.Dispatch("ADODB.Connection")
+#       #conn.ConnectionTimeout = 5
+#       print(STR_CONN)
+#       conn.Open(STR_CONN)
+#       conn.Close()
+#       return "ONLINE", "lime"
+#   except Exception:
+#       return "OFFLINE", "orange"
 
 def verificar_disponibilidade3():
     try:
         conn = win32com.client.Dispatch("ADODB.Connection")
-        conn.ConnectionTimeout = 5
+        conn.ConnectionTimeout = 12
         conn.Open(STR_CONN_LINKED)
         conn.Close()
         return "ONLINE", "lime"
@@ -168,6 +168,40 @@ class ServiceScheduler:
         if self.lab_name in current_tab_text:
             self.refresh_calendar()
 
+    def show_loading_screen(self, message="Carregando..."):
+        """Show a loading overlay with dynamic info"""
+        self.loading_popup = tk.Toplevel(self.frame_certificados)
+        self.loading_popup.geometry("350x130")
+        self.loading_popup.configure(bg=self.cor_fundo)
+        self.loading_popup.title("")
+        self.loading_popup.overrideredirect(True)
+        self.loading_popup.attributes('-topmost', True)
+        
+        # Center on parent
+        self.loading_popup.update_idletasks()
+        x = self.frame_certificados.winfo_rootx() + (self.frame_certificados.winfo_width() // 2) - 175
+        y = self.frame_certificados.winfo_rooty() + (self.frame_certificados.winfo_height() // 2) - 65
+        self.loading_popup.geometry(f"+{x}+{y}")
+        
+        frame = tk.Frame(self.loading_popup, bg=self.cor_fundo, highlightbackground="#FFFFFF", highlightthickness=2)
+        frame.pack(fill='both', expand=True, padx=2, pady=2)
+
+        tk.Label(frame, text=f"Oioi, {username}! O app está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+
+        #tk.Label(frame, text=f"Laboratório de {self.lab_name}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
+        
+        # Message
+        tk.Label(frame, text=message, font=('Segoe UI', 11),bg=self.cor_fundo, fg='white').pack(pady=(5, 5))
+        
+        self.loading_popup.grab_set()
+        self.loading_popup.update()
+
+    def hide_loading_screen(self):
+        """Hide the loading overlay"""
+        if hasattr(self, 'loading_popup') and self.loading_popup.winfo_exists():
+            self.loading_popup.grab_release()
+            self.loading_popup.destroy()
+
     def setup_ui(self):
         main_container = tk.Frame(self.frame_certificados, bg=self.cor_fundo)
         main_container.pack(fill='both', expand=True, padx=10, pady=10)
@@ -175,8 +209,7 @@ class ServiceScheduler:
         self.calendar_frame = tk.Frame(main_container, bg=self.cor_fundo)
         self.calendar_frame.pack(side='left', fill='both', expand=True)
         
-        self.status_label = ttk.Label(self.frame_certificados, 
-                                       text="Pronto para agendamento", font=("Segoe UI", 12))
+        self.status_label = ttk.Label(self.frame_certificados, text="Pronto para agendamento", font=("Segoe UI", 12))
         self.status_label.pack(pady=5)
         
 
@@ -483,29 +516,29 @@ class ServiceScheduler:
         nav_row = tk.Frame(nav_frame, bg=self.cor_fundo)
         nav_row.pack(fill='x')
 
-        btn_prev = tk.Label(nav_row, text="◀", anchor='center', justify='center',
-                            font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',
-                            cursor='hand2', padx=0)
+        btn_prev = tk.Label(nav_row, text="◀", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
         btn_prev.pack(side='left', padx=5)
         btn_prev.bind('<Button-1>', lambda e: self.change_month(-1))
 
-        month_label = tk.Label(nav_row, text=f"{meses_pt[month-1]} {year}",
-                            font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white')
+        month_label = tk.Label(nav_row, text=f"{meses_pt[month-1]} {year}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white')
         month_label.pack(side='left', padx=5)
 
-        btn_next = tk.Label(nav_row, text="▶", anchor='center', justify='center',
-                            font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',
-                            cursor='hand2', padx=0)
+        btn_next = tk.Label(nav_row, text="▶", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
         btn_next.pack(side='left', padx=5)
         btn_next.bind('<Button-1>', lambda e: self.change_month(1))
+
+        nav_row2 = tk.Frame(nav_frame, bg=self.cor_fundo)
+        nav_row2.pack(fill='x')
+
+        lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços - Laboratório de {self.lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
+        lab_label.pack(side='left', padx=5)
 
         header_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
         header_frame.pack(fill='x')
         
         dias_semana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
         for dia in dias_semana:
-            lbl = tk.Label(header_frame, text=dia, font=('Segoe UI', 9, 'bold'),
-                          bg='#1B4B9F', fg='white', width=16, pady=4)
+            lbl = tk.Label(header_frame, text=dia, font=('Segoe UI', 9, 'bold'),bg='#1B4B9F', fg='white', width=16, pady=4)
             lbl.pack(side='left', padx=1, pady=1)
         
         # Calendar Grid
@@ -637,8 +670,8 @@ class ServiceScheduler:
             context_menu.add_command(label=f"Reagendar o serviço para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
             context_menu.add_command(label=f"Reagendar o serviço automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
         elif count > 1:
-            context_menu.add_command(label=f"Reagendar todos para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
-            context_menu.add_command(label=f"Reagendar todos automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
+            context_menu.add_command(label=f"Reagendar todos os serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
+            context_menu.add_command(label=f"Reagendar todos os serviços automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
         
         context_menu.post(event.x_root, event.y_root)
 
@@ -852,6 +885,7 @@ class ServiceScheduler:
         return None
 
     def schedule_all_pending(self, from_date=None):
+        
         try:
             conn = win32com.client.Dispatch("ADODB.Connection")
             conn.Open(self.str_conn)
@@ -920,6 +954,7 @@ class ServiceScheduler:
                 current_time = next_end
             
             conn.Close()
+            
             return first_start, last_end
         except Exception as e:
             print(f"Error in schedule_all_pending: {e}")
@@ -969,11 +1004,15 @@ class ServiceScheduler:
             """)
             conn.Close()
             
+            self.show_loading_screen(f"Carregando {len(schedule_ids)} {"itens..." if len(schedule_ids) > 1 else "item..."}")
+
             self.next_start, self.next_end = self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
             
             self.load_calendar_data()
             self.refresh_calendar()
             self.update_queue_count()
+            
+            self.hide_loading_screen()
             
             if count == 1:
                 msg = f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}"
@@ -1098,11 +1137,14 @@ class ServiceScheduler:
             conn.Execute(f"UPDATE [IST-PGE].dbo.Service_Schedule SET status = 'PENDING', scheduled_start = NULL, scheduled_end = NULL, updated_at = GETDATE() WHERE id IN ({id_list})")
             conn.Close()
             
+            self.show_loading_screen(f"Carregando {len(schedule_ids)} itens...")
+
             self.next_start, self.next_end = self.schedule_all_pending(from_date=new_datetime)
             
             self.load_calendar_data()
             self.refresh_calendar()
             self.update_queue_count()
+            self.hide_loading_screen()
             
             new_date_br = new_date.strftime('%d/%m/%Y')
             messagebox.showinfo('Info agendamento', f"Serviço(s) reagendado(s) para {new_date_br} a partir das {new_time.strftime('%H:%M')}")
@@ -1172,7 +1214,7 @@ class ServiceScheduler:
         if exceptions_raw:
             exc_frame = tk.Frame(popup, bg=self.cor_fundo)
             exc_frame.pack(fill='x', padx=10, pady=(0, 5))
-            tk.Label(exc_frame, text="Bloqueios de Agenda (clique direito para remover):", font=('Segoe UI', 9, 'bold'), bg=self.cor_fundo, fg='#FFD700').pack(anchor='w')
+            tk.Label(exc_frame, text="Bloqueios de Agenda:", font=('Segoe UI', 9, 'bold'), bg=self.cor_fundo, fg='#FFD700').pack(anchor='w')
             
             for i, exc in enumerate(exceptions_raw):
                 exc_text = self._format_exception_text(exc)
@@ -1346,13 +1388,18 @@ class ServiceScheduler:
             conn.Close()
             
             reschedule_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-            self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
+
+            self.show_loading_screen(f"Carregando {len(selected_indices)} itens...")
+            first_start, last_end = self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
             
             self.load_calendar_data()
+
             self.render_calendar()
             popup.destroy()
+            self.hide_loading_screen()
             
-            msg = f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')}" if count == 1 else f"{count} serviços reagendados"
+            #msg = f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')}" if count == 1 else f"{count} serviços reagendados"
+            msg = f"Serviço reagendado para {last_end.strftime('%d/%m/%Y')} às {last_end.strftime('%H:%M')}" if count == 1 else f"Serviços reagendados para a partir de {first_start.strftime('%d/%m/%Y')} às {first_start.strftime('%H:%M')}"
             self.status_label.config(text=msg)
             messagebox.showinfo('Info agendamento', msg)
         except Exception as e:
@@ -1365,7 +1412,8 @@ class ServiceScheduler:
         count = len(exceptions)
         
         if count == 1:
-            messagebox.showerror("Erro", "Não é possível remover o bloqueio 'Intervalinho'!")
+            
+            messagebox.showerror("Erro kkkkkkkkkkk", f"Falha ao remover bloqueios:\n\nalá tentou remover o bloqueio 'Intervalinho' kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
             return
         
         confirm = messagebox.askyesno("Info agendamento", f"Deseja remover {'o bloqueio' if count == 1 else f'os {count-1} bloqueios'} do dia {date_str}?")
@@ -1488,6 +1536,7 @@ class ServiceSchedulerLinkedDirect:
         
         self.setup_ui()
         self.load_services()
+        self.cleanup_pending_services()
         
     def on_tab_changed(self, event):
         notebook = event.widget
@@ -1581,7 +1630,97 @@ class ServiceSchedulerLinkedDirect:
 
         self.status_label = ttk.Label(self.frame_certificados,text="Selecione os serviços e use o botão direito para agendar",font=("Segoe UI", 12))
         self.status_label.pack(pady=5)
-    
+
+    def cleanup_pending_services(self):
+        """Remove PENDING services that have no schedule (orphaned)"""
+        sector_id = self.lab_config.get('sector_id', 0)
+        
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn.Open(self.str_conn_primary)
+            
+            # Get orphaned services
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            sql = f"""
+                SELECT ss.id, ss.notes
+                FROM [IST-PGE].dbo.Service_Schedule ss
+                WHERE ss.status = 'PENDING'
+                AND ss.scheduled_start IS NULL
+                AND ss.scheduled_end IS NULL
+                AND ss.id_sector = {sector_id}
+            """
+            rs.Open(sql, conn)
+            
+            orphaned = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    orphaned.append({
+                        'id': rs.Fields('id').Value,
+                        'notes': rs.Fields('notes').Value if rs.Fields('notes').Value else "Sem observações"
+                    })
+                    rs.MoveNext()
+            rs.Close()
+            
+            if orphaned:
+                # Delete them
+                ids = ','.join(str(o['id']) for o in orphaned)
+                conn.Execute(f"DELETE FROM [IST-PGE].dbo.Service_Schedule WHERE id IN ({ids})")
+                
+                # Build message
+                count = len(orphaned)
+                if count == 1:
+                    msg = f"Foi removido 1 registro pendente sem agendamento:\n\n"
+                else:
+                    msg = f"Foram removidos {count} registros com erro de agendamento:\n\n"
+                
+                for o in orphaned[:5]:  # Show max 5
+                    msg += f"• {o['notes'][:80]}\n"
+                
+                if count > 5:
+                    msg += f"\n... e mais {count - 5} registro(s)."
+                
+                messagebox.showinfo("Limpeza de Registros Pendentes", msg)
+            
+            conn.Close()
+            
+        except Exception as e:
+            print(f"Error cleaning up pending services: {e}")
+
+    def show_loading_screen(self, message="Carregando..."):
+        """Show a loading overlay with dynamic info"""
+        self.loading_popup = tk.Toplevel(self.frame_certificados)
+        self.loading_popup.geometry("350x130")
+        self.loading_popup.configure(bg=self.cor_fundo)
+        self.loading_popup.title("")
+        self.loading_popup.overrideredirect(True)
+        self.loading_popup.attributes('-topmost', True)
+        
+        # Center on parent
+        self.loading_popup.update_idletasks()
+        x = self.frame_certificados.winfo_rootx() + (self.frame_certificados.winfo_width() // 2) - 175
+        y = self.frame_certificados.winfo_rooty() + (self.frame_certificados.winfo_height() // 2) - 65
+        self.loading_popup.geometry(f"+{x}+{y}")
+        
+        frame = tk.Frame(self.loading_popup, bg=self.cor_fundo, highlightbackground="#FFFFFF", highlightthickness=2)
+        frame.pack(fill='both', expand=True, padx=2, pady=2)
+
+        tk.Label(frame, text=f"Oioi, {username}! O app está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+
+        #tk.Label(frame, text=f"Laboratório de {self.lab_}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
+        
+        # Message
+        tk.Label(frame, text=message, font=('Segoe UI', 11),bg=self.cor_fundo, fg='white').pack(pady=(5, 5))
+        
+        self.loading_popup.grab_set()
+        self.loading_popup.update()
+
+    def hide_loading_screen(self):
+        """Hide the loading overlay"""
+        if hasattr(self, 'loading_popup') and self.loading_popup.winfo_exists():
+            self.loading_popup.grab_release()
+            self.loading_popup.destroy()
+
     def load_services(self):
         """Load services from linked server for this lab"""
         for item in self.tree.get_children():
@@ -1591,7 +1730,7 @@ class ServiceSchedulerLinkedDirect:
         
         lab_code = self.lab_code
         sector_id = self.lab_config.get('sector_id', 0)
-        
+
         try:
             conn = win32com.client.Dispatch("ADODB.Connection")
             rs = win32com.client.Dispatch("ADODB.Recordset")
@@ -1605,21 +1744,49 @@ class ServiceSchedulerLinkedDirect:
                     sm.description AS 'Descrição',
                     sm.code AS 'Code',
                     sm.execution_time AS 'execution_time'
+
                 FROM instruments_services iss
+
                 LEFT JOIN orders_services AS os ON os.id = iss.id_service_order 
                 LEFT JOIN service_modes AS sm ON sm.id = iss.id_service
                 LEFT JOIN instruments AS i ON i.id = iss.id_instrument AND i.id_service_order = os.id
                 LEFT JOIN budgets AS b ON b.id_order_service = os.id
+
                 WHERE os.removed = 0
                 AND iss.removed = 0
                 AND sm.removed = 0
                 AND i.removed = 0
+                AND b.is_last_revision = 1
                 AND i.id_current_sector = {sector_id}
                 AND sm.code LIKE '%631{lab_code.lower()}%'
-                AND b.is_last_revision = 1
                 ORDER BY os.receiving_date ASC
             """
-            
+            #sql = f"""
+            #    SELECT 
+            #        os.code AS 'OS',
+            #        i.code AS 'Item',
+            #        sm.specification AS 'Especificação',
+            #        sm.description AS 'Descrição',
+            #        sm.code AS 'Code',
+            #        sm.execution_time AS 'execution_time'
+#
+            #    FROM instruments_services iss
+#
+            #    LEFT JOIN orders_services AS os ON os.id = iss.id_service_order 
+            #    LEFT JOIN service_modes AS sm ON sm.id = iss.id_service
+            #    LEFT JOIN instruments AS i ON i.id = iss.id_instrument AND i.id_service_order = os.id
+            #    LEFT JOIN budgets AS b ON b.id_order_service = os.id
+#
+            #    WHERE os.removed = 0
+            #    AND iss.removed = 0
+            #    AND sm.removed = 0
+            #    AND i.removed = 0
+            #    AND b.is_last_revision = 1
+            #    --AND (i.id_current_sector = {sector_id} OR i.id_current_sector = 1)
+            #    AND (i.id_current_sector = {sector_id})
+            #    AND sm.code LIKE '%631{lab_code.lower()}%'
+            #"""
+            #print('sql\n\n',sql)
             rs.Open(sql, conn)
             
             if not rs.EOF:
@@ -1754,7 +1921,6 @@ class ServiceSchedulerLinkedDirect:
         
         sector_id = self.lab_config.get('sector_id', 0)
         lab_name = self.lab_config.get('name', '')
-        
 
         try:
             conn = win32com.client.Dispatch("ADODB.Connection")
@@ -1780,12 +1946,13 @@ class ServiceSchedulerLinkedDirect:
                         WHERE code = '{row['Code']}';
                     END
                 """
-                
-
+                print('sync_sql',sync_sql)
                 conn.Execute(sync_sql)
                 
                 rs = win32com.client.Dispatch("ADODB.Recordset")
+                print(f"SELECT id FROM [IST-PGE].dbo.Service_Modes_Local WHERE code = '{row['Code']}'")
                 rs.Open(f"SELECT id FROM [IST-PGE].dbo.Service_Modes_Local WHERE code = '{row['Code']}'", conn)
+
                 local_service_id = rs.Fields('id').Value if not rs.EOF else None
                 rs.Close()
                 
@@ -1795,6 +1962,7 @@ class ServiceSchedulerLinkedDirect:
                         INSERT INTO [IST-PGE].dbo.Service_Schedule (service_id, notes, id_sector)
                         VALUES ({local_service_id}, '{notes.replace("'", "''")}', {sector_id})
                     """
+                    print('schedule_sql\n\n',schedule_sql)
                     conn.Execute(schedule_sql)
                     added_count += 1
             
@@ -1807,9 +1975,9 @@ class ServiceSchedulerLinkedDirect:
             else:
                 self.status_label.config(text=f"{added_count} serviços adicionados à fila!")
                 
-
             self.clear_selection()
             self.process_fifo()
+            self.hide_loading_screen()
             
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao agendar:\n{str(e)}")
@@ -1833,6 +2001,7 @@ class ServiceSchedulerLinkedDirect:
                 WHERE ss.status = 'PENDING' AND ss.id_sector = {sector_id}
                 ORDER BY ss.priority ASC, ss.requested_at ASC
             """
+            print('sql\n\n',sql)
             rs.Open(sql, conn)
             
             pending_services = []
@@ -1852,17 +2021,24 @@ class ServiceSchedulerLinkedDirect:
             
             pending_count = len(pending_services)
             
+            #self.show_loading_screen(f"Carregando agenda para {pending_count} {"itens" if pending_count > 1 else "item"}...")
+
             if pending_count == 0:
                 messagebox.showinfo("Aviso", "Nenhum serviço pendente na fila!")
                 conn.Close()
                 return
             
+            self.show_loading_screen(f"Agendando {pending_count} serviço(s) em {lab_name}...")
+            self.frame_certificados.update()
+
             current_time = datetime.now()
             scheduled_count = 0
             for service in pending_services:
-                print('next_start, next_end')
+                print("next_start, next_end = self.find_next_available_slot(current_time, service['execution_time_minutes'])")
                 next_start, next_end = self.find_next_available_slot(current_time, service['execution_time_minutes'])
                 
+                print("if next_start is None:")
+
                 if next_start is None:
                     continue
                 conn.Execute(f"""
@@ -1872,7 +2048,13 @@ class ServiceSchedulerLinkedDirect:
                         status = 'SCHEDULED', updated_at = GETDATE()
                     WHERE id = {service['schedule_id']}
                 """)
-                
+                print('statement 1\n\n',f"""
+                    UPDATE [IST-PGE].dbo.Service_Schedule
+                    SET scheduled_start = '{next_start.strftime('%Y-%m-%d %H:%M:%S')}',
+                        scheduled_end = '{next_end.strftime('%Y-%m-%d %H:%M:%S')}',
+                        status = 'SCHEDULED', updated_at = GETDATE()
+                    WHERE id = {service['schedule_id']}
+                """)
                 
                 conn.Execute(f"""
                     INSERT INTO [IST-PGE].dbo.Time_Slots (slot_date, start_time, end_time, schedule_id, service_id, id_sector)
@@ -1881,12 +2063,18 @@ class ServiceSchedulerLinkedDirect:
                             {service['service_id']}, {sector_id})
                 """)
                 
+                print('statement 2\n\n',f"""
+                    INSERT INTO [IST-PGE].dbo.Time_Slots (slot_date, start_time, end_time, schedule_id, service_id, id_sector)
+                    VALUES ('{next_start.strftime('%Y-%m-%d')}', '{next_start.strftime('%H:%M:%S')}',
+                            '{next_end.strftime('%H:%M:%S')}', {service['schedule_id']},
+                            {service['service_id']}, {sector_id})
+                """)
                 
                 current_time = next_end
                 scheduled_count += 1
             
+            self.hide_loading_screen()
             conn.Close()
-            
             
             if scheduled_count == 1:
                 messagebox.showinfo("Info agendamento", f"{scheduled_count} serviço agendado em {lab_name}!")
@@ -1894,10 +2082,12 @@ class ServiceSchedulerLinkedDirect:
                 messagebox.showinfo("Info agendamento", f"{scheduled_count} serviços agendados em {lab_name}!")
             
         except Exception as e:
+            self.hide_loading_screen()
             messagebox.showerror("Erro", f"Falha ao processar fila:\n{str(e)}")
     
     # ===== FIFO ENGINE (same as ServiceScheduler) =====
     def find_next_available_slot(self, from_time, duration_minutes):
+        
         
         check_date = from_time.date()
         max_days = 365
@@ -1922,14 +2112,17 @@ class ServiceSchedulerLinkedDirect:
                 from_time = datetime.combine(check_date, time(8, 0))
                 continue
             
+            loop_count = 0
             for window in sorted(day_windows, key=lambda w: w['start_time']):
                 
                 window_start_dt = datetime.combine(check_date, window['start_time'])
                 window_end_dt = datetime.combine(check_date, window['end_time'])
                 proposed_start = max(from_time, window_start_dt)
 
+                print("while proposed_start + timedelta(minutes=duration_minutes) <= window_end_dt:")
                 while proposed_start + timedelta(minutes=duration_minutes) <= window_end_dt:
-                    
+                    loop_count += 1
+                    print('loop_count: ', loop_count)
                     proposed_end = proposed_start + timedelta(minutes=duration_minutes)
                     
                     blocked_by_exception = False
@@ -1942,23 +2135,24 @@ class ServiceSchedulerLinkedDirect:
                                 blocked_by_exception = True
                                 proposed_start = ex_end_dt
                                 
+                                self.hide_loading_screen()
                                 break
                     
                     if blocked_by_exception:
                         continue
-                    
                     
                     if self._has_time_slot_conflict(check_date, proposed_start.time(), proposed_end.time()):
                         
                         next_free = self._get_next_free_time(check_date, proposed_start.time())
                         if next_free is None:
                             
+                            self.hide_loading_screen()
                             break
                         proposed_start = datetime.combine(check_date, next_free)
                         continue
-                    
+                    #print('GET OUT')
                     return proposed_start, proposed_end
-            
+                
             check_date += timedelta(days=1)
             if day_windows:
                 earliest = min(w['start_time'] for w in day_windows)
@@ -2228,7 +2422,7 @@ class ServiceSchedulerLinkedDirect:
 
 
 # ==================== MAIN ====================
-status_servidor, cor_status = verificar_disponibilidade()
+status_servidor, cor_status = verificar_disponibilidade3()
 status_servidor3, cor_status3 = verificar_disponibilidade3()
 
 root = tk.Tk()
@@ -2251,7 +2445,6 @@ notebook.pack(expand=True, fill="both")
 for lab_code, lab_config in LABS.items():
     
     ServiceScheduler(notebook, STR_CONN, cor_fundo,id_sector=lab_config['sector_id'],lab_name=lab_config['name'],lab_config=lab_config)
-    
     ServiceSchedulerLinkedDirect(notebook, STR_CONN_LINKED, STR_CONN, cor_fundo,lab_code=lab_code,lab_config=lab_config)
     
 frame_info = ttk.Frame(notebook)
