@@ -11,6 +11,12 @@ from getpass import getuser
 from urllib.parse import quote
 import socket
 
+import base64
+from io import BytesIO
+from PIL import Image, ImageTk
+
+LOGO_BASE64 = """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"""
+
 def get_server_ip(hostname='UO061M4118173'):
     try:
         return socket.gethostbyname(hostname)
@@ -38,6 +44,8 @@ STR_CONN = (
     f"User ID=sa;"
     f"Password=Wheelp0p2;"
 )
+
+
 STR_CONN_LINKED = (
     f"Provider=SQLOLEDB;"
     f"Data Source={ip_linked};"
@@ -83,15 +91,15 @@ greetings = [
     f' Tudo bão {username}?  ',
     f' Bão!?  ',
     f' E aí {username}, bão!?  ',
-    f' {username}!?  ',
-    f' Alô alô {username}!  ',
-    f' E aí {username}, tudo certo?  ',    
-    f' Seu nome é Gabriel?  ',    
-    f' Opa opa  ',    
-    f' Aoba  ',    
+    f' {username}!? ',
+    f' Alô alô {username}! ',
+    f' E aí {username}, tudo certo? ',    
+    f' Seu nome é Gabriel? ',    
+    f' Opa opa ',    
+    f' Aoba ',    
     f' Tudo certo?  ',
-    f'  ¯|_(ツ)_|¯   ',    
-    f'  *_*   ',
+    f'  ¯|_(ツ)_|¯  ',    
+    f'  *_*  ',
     f'  Buenas tardes!  ',
     f'  Vai um chimas?  '
 ]
@@ -131,6 +139,111 @@ def format_os_code(os_code):
     return os_code
 
 
+class LabSelector:
+    """Master tab with lab selection buttons"""
+    
+    def __init__(self, parent_notebook, cor_fundo):
+        self.cor_fundo = cor_fundo
+        self.frame = ttk.Frame(parent_notebook)
+        parent_notebook.add(self.frame, text=" Agenda de Serviços ")
+        self._create_lab_buttons()
+
+    def _create_lab_buttons(self):
+        main = tk.Frame(self.frame, bg=self.cor_fundo)
+        main.pack(fill='both', expand=True, padx=20, pady=35)
+        
+        # Logo
+        try:
+            img_data = base64.b64decode(LOGO_BASE64)
+            img = Image.open(BytesIO(img_data))
+            w = 45
+            h = int(w * 3.74703357)
+            img = img.resize((h, w), Image.LANCZOS)
+            self.logo_image = ImageTk.PhotoImage(img)
+            tk.Label(main, image=self.logo_image, bg=self.cor_fundo).pack(pady=(0, 10))
+        except Exception as e:
+            print(f"Logo error: {e}")
+
+        ttk.Label(main, text=f"{buenas}", font=("Segoe UI", 10), background='black').pack(pady=(20, 0))
+        
+        grid = tk.Frame(main, bg=self.cor_fundo)
+        grid.pack(expand=True)
+        
+        row, col = 0, 0
+        max_cols = 1
+        
+        style = ttk.Style()
+        #style.configure('Lab.TButton', font=('Segoe UI', 10), padding=1)
+        style.configure('Lab.TButton', 
+            font=('Segoe UI', 10),
+            padding=2,
+            borderwidth=2,           # Border thickness
+            relief='groove',         # raised, sunken, flat, ridge, solid, groove
+            background='#1B4B9F',    # Background color
+            foreground='black',      # Text color
+            anchor='center',         # Text alignment: center, w, e, n, s, nw, etc.
+            width=45                # Width in characters
+            )
+
+        for lab_code, lab_config in LABS.items():
+            
+            btn = ttk.Button(grid, text=f"Laboratório de {lab_config['name']}", style='Lab.TButton',command=lambda lc=lab_code, lcfg=lab_config: self.open_lab(lc, lcfg),cursor='hand2')
+            
+            #btn.bind('<Button-3>', lambda e, lcfg=lab_config: self.open_teams_chat(lcfg))
+            btn.bind('<Button-3>', lambda e, lc=lab_code, lcfg=lab_config: self.show_lab_context_menu(e, lc, lcfg))
+            btn.grid(row=row, column=col, padx=10, pady=2, sticky='ew')
+            
+            col += 1
+            if col >= max_cols:
+                col = 0
+                row += 1
+
+    def show_lab_context_menu(self, event, lab_code, lab_config):
+        """Right-click context menu for lab button"""
+        context_menu = tk.Menu(self.frame, tearoff=0)
+        
+        #context_menu.add_command(label=f"📅 Abrir Agenda de {lab_config['name']}",command=lambda lc=lab_code, lcfg=lab_config: self.open_lab(lc, lcfg))
+        
+        #context_menu.add_separator()
+        
+        chat_id = lab_config.get('teams_chat_id', '')
+        if chat_id:
+            context_menu.add_command(label=f"Iniciar chat do Teams com Laboratório de {lab_config['name']}",command=lambda lcfg=lab_config: self.open_teams_chat(lcfg))
+        
+        planilha_link = lab_config.get('sharepoint_planilha', '')
+        #if planilha_link:
+        #    context_menu.add_command(label=f"📊 Abrir Planilha de Cálculo",command=lambda lcfg=lab_config: webbrowser.open(lcfg.get('sharepoint_planilha', '')))
+        
+        context_menu.post(event.x_root, event.y_root)
+
+
+    def open_teams_chat(self, lab_config):
+        chat_id = lab_config.get('teams_chat_id', '')
+        if chat_id:
+            link = f"https://teams.cloud.microsoft/l/chat/19:{chat_id}@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
+            webbrowser.open(link)   
+
+    def open_lab(self, lab_code, lab_config):
+        """Open lab calendar + services in a new window"""
+        lab_window = tk.Toplevel(self.frame)
+        lab_window.geometry("1150x700")
+        lab_window.minsize(900, 600)
+        lab_window.title(f"Calendário - Laboratório de {lab_config['name']}")
+        lab_window.configure(bg=self.cor_fundo)
+        
+        lab_notebook = ttk.Notebook(lab_window)
+        lab_notebook.pack(fill='both', expand=True)
+        
+        ServiceScheduler(lab_notebook, STR_CONN, self.cor_fundo,
+                        id_sector=lab_config['sector_id'],
+                        lab_name=lab_config['name'],
+                        lab_config=lab_config)
+        
+        ServiceSchedulerLinkedDirect(lab_notebook, STR_CONN_LINKED, STR_CONN, 
+                                      self.cor_fundo, lab_code=lab_code, 
+                                      lab_config=lab_config)
+
+
 # ==================== SERVICE SCHEDULER (MULTI-LAB) ====================
 class ServiceScheduler:
     """ ABA: Agendamento de Serviços (Calibração FIFO) - Multi-Laboratório """
@@ -164,8 +277,11 @@ class ServiceScheduler:
         current_tab = notebook.select()
         current_tab_text = notebook.tab(current_tab, "text")
         
-        if self.lab_name in current_tab_text:
+        #if self.lab_name in current_tab_text:
+        #    self.refresh_calendar()
+        if current_tab_text:
             self.refresh_calendar()
+
 
     def show_loading_screen(self, message="Carregando..."):
         
@@ -211,7 +327,6 @@ class ServiceScheduler:
         self.status_label = ttk.Label(self.frame_certificados, text="Pronto para agendamento", font=("Segoe UI", 12))
         self.status_label.pack(pady=5)
         
-
     def open_teams_chat(self):
         try:
             chat_id = self.lab_config.get('teams_chat_id', '')
@@ -529,7 +644,8 @@ class ServiceScheduler:
         nav_row2 = tk.Frame(nav_frame, bg=self.cor_fundo)
         nav_row2.pack(fill='x')
 
-        lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços - Laboratório de {self.lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
+        lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
+        #lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços - Laboratório de {self.lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
         lab_label.pack(side='left', padx=5)
 
         header_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
@@ -1338,21 +1454,21 @@ class ServiceScheduler:
         values = tree.item(selected[0])['values']
         os_code = values[1] if len(values) > 1 else ""
         
-        context_menu.add_command(label=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat)
-        context_menu.add_separator()
-        
         if os_code:
             sharepoint_url = self.get_sharepoint_url(os_code)
             if sharepoint_url:
                 context_menu.add_command(label="Abrir link do SharePoint", command=lambda u=sharepoint_url: webbrowser.open(u))
                 context_menu.add_command(label="Copiar link do SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
-        
+    
+        context_menu.add_separator()
+        context_menu.add_command(label=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat)
+        context_menu.add_separator()
         context_menu.add_command(label="Abrir diretório da planilha de cálculo", command=lambda: self.open_teams_link_planilha(None))
         
         if calendar_key and total_count > 0:
             context_menu.add_separator()
             if selected_count == 1:
-                context_menu.add_command(label=f"Reagendar todos os serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
+                context_menu.add_command(label=f"Reagendar TODOS os serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
                 context_menu.add_command(label="Reagendar o serviço selecionado automaticamente", command=lambda t=tree, s=selected: self.reschedule_selected_services(t, s))
             else:
                 context_menu.add_command(label=f"Reagendar os {selected_count} serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
@@ -1514,7 +1630,7 @@ class ServiceScheduler:
         self.update_queue_count()
 
 
-class ServiceSchedulerLinkedDirect:
+class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
     """ ABA: Serviços para Agendamento (Linked Server) - Multi-Laboratório """
     
     def __init__(self, parent_notebook, str_conn, str_conn_primary, cor_fundo, lab_code="", lab_config=None):
@@ -1527,7 +1643,7 @@ class ServiceSchedulerLinkedDirect:
         lab_name = self.lab_config.get('name', lab_code)
         sector_id = self.lab_config.get('sector_id', 0)
         
-        tab_name = f"⮃ {lab_name}"
+        tab_name = f"Serviços de {lab_name}"
         self.frame_certificados = ttk.Frame(parent_notebook)
         parent_notebook.add(self.frame_certificados, text=tab_name)
 
@@ -1551,6 +1667,15 @@ class ServiceSchedulerLinkedDirect:
         
         if self.lab_config.get('name', '') in current_tab_text:
             self.load_services()
+
+    def open_teams_chat(self):
+        try:
+            chat_id = self.lab_config.get('teams_chat_id', '')
+            if chat_id:
+                link = f"https://teams.cloud.microsoft/l/chat/19:{chat_id}@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
+                webbrowser.open(link)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao abrir chat:\n{str(e)}")
 
     def setup_ui(self):
         lab_name = self.lab_config.get('name', '')
@@ -1891,10 +2016,15 @@ class ServiceSchedulerLinkedDirect:
         context_menu = tk.Menu(self.tree, tearoff=0)
         count = len(selected)
         
+        lab_name = self.lab_config.get('name', '')
+
         if count == 1:
-            context_menu.add_command(label=f"Agendar serviço", command=self.schedule_selected)
+            context_menu.add_command(label=f"Agendar serviço automaticamente", command=self.schedule_selected)
         elif count > 1:
-            context_menu.add_command(label=f"Agendar serviços", command=self.schedule_selected)
+            context_menu.add_command(label=f"Agendar serviços automaticamente", command=self.schedule_selected)
+            
+        context_menu.add_separator()
+        context_menu.add_command(label=f"Iniciar chat do Teams com {lab_name}", command=self.open_teams_chat)
         
         context_menu.add_separator()
         context_menu.add_command(label="Selecionar Todos", command=self.select_all)
@@ -2412,14 +2542,610 @@ class ServiceSchedulerLinkedDirect:
             messagebox.showerror("Erro", f"Falha ao salvar Bloqueio de Calendário:\n{str(e)}")
 
 
+class DatabaseViewer6: ### VISTA GERAL
+
+    def __init__(self, parent_notebook, str_conn, cor_fundo):   
+        #print('str_conn',str_conn) 
+        self.str_conn = str_conn    
+        self.cor_fundo = cor_fundo  
+        self.selected_items = []    
+        self.frame_certificados = ttk.Frame(parent_notebook)    
+        parent_notebook.add(self.frame_certificados, text=" Vista Geral de Ordens de Serviço ") 
+        
+        self.teams_chat_ids = {                 
+                    'Laboratório de Dimensional':                   '461bebb602cc4c2f997670af64f1bc50',
+                    'Laboratório de Massa':                         '474353252d224d7caf749a4b5301c4d8',
+                    'Laboratório de Pressão':                       'fc9176a569904180bbfa3eeb1bd52651',
+                    'Laboratório de Força, Torque e Dureza':        'fc9176a569904180bbfa3eeb1bd52651',
+                    'Laboratório de Volume e Massa Específica':     '34b79fe77c3e41b7a3030c4f010de73e',
+                    'Laboratório de Metrologia por Coordenadas':    '716ff922fa584a2582ecb48e509edc2e',
+                    'Laboratório de Temperatura e Umidade':         '680cba2db76043939995da4b21cfd11c',
+                    'Laboratório de Vazão':                         'e04abb13e3114d95b399290fe371a391',
+                    'Laboratório de Eletricidade':                  '680cba2db76043939995da4b21cfd11c',
+                    'Laboratório de Tempo e Frequência':            '680cba2db76043939995da4b21cfd11c',
+                    'Laboratório de Físico-Química':                '34b79fe77c3e41b7a3030c4f010de73e',
+                    'Revisão de Relatórios':                        '7e40040f299041f799e60f152711f017',
+                    'Relatórios Aguardando Assinaturas':            '7e40040f299041f799e60f152711f017',
+                    'Expedição':                                    'missing',
+                }
+        
+        # SILVIA NUNES 04/05/2026
+        #'https://teams.microsoft.com/l/chat/19:461bebb602cc4c2f997670af64f1bc50@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'https://teams.microsoft.com/l/chat/19:474353252d224d7caf749a4b5301c4d8@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'https://teams.microsoft.com/l/chat/19:fc9176a569904180bbfa3eeb1bd52651@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'https://teams.microsoft.com/l/chat/19:fc9176a569904180bbfa3eeb1bd52651@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'https://teams.microsoft.com/l/chat/19:34b79fe77c3e41b7a3030c4f010de73e@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'716ff922fa584a2582ecb48e509edc2e',
+        #'https://teams.microsoft.com/l/chat/19:680cba2db76043939995da4b21cfd11c@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'https://teams.microsoft.com/l/chat/19:e04abb13e3114d95b399290fe371a391@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'',
+        #'https://teams.microsoft.com/l/chat/19:680cba2db76043939995da4b21cfd11c@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'https://teams.microsoft.com/l/chat/19:680cba2db76043939995da4b21cfd11c@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+        #'https://teams.microsoft.com/l/chat/19:34b79fe77c3e41b7a3030c4f010de73e@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
+
+        self.setup_ui_agenda_os()
+    
+    def on_entry_focus_in(self, event):
+        if self.search_entry.get() == self.placeholder_text:
+            self.search_entry.delete(0, 'end')
+            self.search_entry.configure(style='TEntry')
+
+    def on_entry_focus_out(self, event):
+        if not self.search_entry.get():
+            self.search_entry.insert(0, self.placeholder_text)
+            style = ttk.Style()
+            self.search_entry.configure(style='Placeholder.TEntry')
+
+    def setup_ui_agenda_os(self):
+        search_frame = ttk.Frame(self.frame_certificados)
+        search_frame.pack(pady=10, padx=10, fill="x")
+
+        #ttk.Label(search_frame, text="Buscar:").pack(side="left", padx=(0, 15))
+        #self.search_entry = ttk.Entry(search_frame, width=30)
+        #self.search_entry.pack(side="left", padx=5)
+        #self.search_entry.bind('<Return>', lambda e: self.perform_search())
+
+        #ttk.Label(search_frame, text="Buscar:").pack(side="left", padx=(0, 15))
+        
+        #greeting_frame = ttk.Frame(search_frame)
+        #greeting_frame.pack(fill='x', pady=(0, 5))
+        
+        self.greetings = ttk.Label(search_frame, text=f"{buenas}", font=("Segoe UI", 10),background='black')
+        self.greetings.pack(side="left", padx=5, pady=(0, 0))
+        
+        self.search_entry = ttk.Entry(search_frame, width=30)
+        self.search_entry.pack(side="left", padx=5)
+        self.search_entry.bind('<Return>', lambda e: self.perform_search())
+
+        style = ttk.Style()
+        style.configure('Placeholder.TEntry', foreground='#7D7D7D')
+
+        self.placeholder_text = "Digite sua busca..."
+        self.search_entry.insert(0, self.placeholder_text)
+        self.search_entry.configure(style='Placeholder.TEntry')
+
+        self.search_entry.bind('<FocusIn>', self.on_entry_focus_in)
+        self.search_entry.bind('<FocusOut>', self.on_entry_focus_out)
+        
+        self.buscar = ttk.Button(search_frame, text="Buscar", command=self.perform_search).pack(side="left", padx=5)
+        self.mostrar_todos = ttk.Button(search_frame, text="Mostrar Todos", command=self.load_all_records).pack(side="left", padx=5)
+                
+        tree_frame = ttk.Frame(self.frame_certificados)
+        tree_frame.pack(pady=10, padx=10, expand=True, fill="both")
+        
+        tree_scroll_y = ttk.Scrollbar(tree_frame)
+        tree_scroll_y.pack(side="right", fill="y")
+        
+        tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
+        tree_scroll_x.pack(side="bottom", fill="x")
+        
+        columns = ("OS",
+                    "Recebimento", 
+                    "Entrega", 
+                    "Status",
+                    "Item",
+                    "Setor"
+                )
+        
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set, selectmode="extended")
+        
+        tree_scroll_y.config(command=self.tree.yview)
+        tree_scroll_x.config(command=self.tree.xview)
+        
+        column_widths3 = {
+            "OS":                   20,
+            "Recebimento":          20,
+            "Entrega":              40,
+            "Item":                 40,
+            "Status":               20,
+            "Setor":                40
+        }
+        
+        for col in columns:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, width=column_widths3.get(col, 50), minwidth=20)
+        
+        self.tree.pack(expand=True, fill="both")
+        
+        self.tree.bind('<Button-3>', self.show_context_menu)
+        
+        self.tree.bind('<<TreeviewSelect>>', self.on_select)
+        
+        button_frame = ttk.Frame(self.frame_certificados)
+        button_frame.pack(pady=10, padx=10, fill="x")
+        self.btn_visualizar = ttk.Button(button_frame, text="Visualizar Selecionado(s)", command=self.print_selected)
+        self.btn_visualizar.pack(side="left", padx=5)
+        self.btn_visualizar.config(state="disabled")
+        
+        ##self.btn_gerar = ttk.Button(button_frame, text="Função 2", command=self.export_selected)
+        ##self.btn_gerar.pack(side="left", padx=5)
+        ##self.btn_gerar.config(state="disabled")
+
+        self.btn_limpar = ttk.Button(button_frame, text="Limpar Seleção", command=self.clear_selection)
+        self.btn_limpar.pack(side="left", padx=5)
+        self.btn_limpar.config(state="disabled")
+        
+        self.btn_limpar = ttk.Button(button_frame, text="Ir para Hoje", command=self.scroll_to_today)
+        self.btn_limpar.pack(side="left", padx=5)
+
+        self.status_label = ttk.Label(self.frame_certificados, text="Pronto para consulta", font=("Segoe UI", 9))
+        self.status_label.pack(pady=5)
+        
+        self.tree.tag_configure('atrasado',     background="#FFD9D9")    
+        self.tree.tag_configure('hoje',         background="#B7D5F5")        
+        self.tree.tag_configure('proximo',      background="#E2FFD3")  
+        
+        self.load_all_records()
+        
+    def show_context_menu(self, event):
+        item = self.tree.identify_row(event.y)
+        column = self.tree.identify_column(event.x)
+        
+        if item:
+            self.tree.selection_set(item)
+            
+            context_menu = tk.Menu(self.tree, tearoff=0)
+            
+            values = self.tree.item(item)['values']
+            sharepoint_url = values[0] if values and len(values) > 0 else ""
+            setor_teams = values[5]
+            if sharepoint_url:
+                context_menu.add_command(label="Abrir link do Sharepoint no navegador", command=lambda u=sharepoint_url: self.open_sharepoint_link(u))
+                context_menu.add_separator()
+                context_menu.add_command(label=f"Iniciar chat do Teams com {setor_teams}",command=lambda i=item: self.open_teams_chat(i))
+                context_menu.add_separator()
+                context_menu.add_command(label="Copiar link", command=lambda u=sharepoint_url: self.copy_to_clipboard(u))
+                context_menu.add_command(label="Copiar linha", command=lambda i=item: self.copy_row_data(i))
+                #context_menu.add_separator()
+                #context_menu.add_command(label="Enviar para impressora Zebra [Em desenvolvimento]", command=lambda: self.send_to_printer(self.tree.item(item)['values']))
+            
+            context_menu.post(event.x_root, event.y_root)               
+            context_menu.add_separator()            
+            context_menu.post(event.x_root, event.y_root)
+
+    def scroll_to_today(self, offset=0):
+        target_item = None
+        target_index = 0
+        all_items = self.tree.get_children()
+        
+        for i, item in enumerate(all_items):
+            values = self.tree.item(item)['values']
+            status = values[3] if len(values) > 3 else ""
+            if status == "Hoje":
+                target_item = item 
+                target_index = i
+                break
+        
+        if not target_item:
+            for i, item in enumerate(all_items):
+                values = self.tree.item(item)['values']
+                status = values[3] if len(values) > 3 else ""
+                if status == "Atraso":
+                    target_item = item
+                    target_index = i
+                    break
+        
+        if target_item:
+            new_index = max(0, min(target_index + offset, len(all_items) - 1))
+            target_item = all_items[new_index]
+            
+            # Select the item first
+            self.tree.selection_set(target_item)
+            self.tree.focus(target_item)
+            
+            # Then scroll it to the top
+            self.tree.yview_moveto(new_index / len(all_items))
+
+    def find_chat_id(self, chat_name):
+        
+        if not chat_name:
+            return ""
+        
+        # First try exact match
+        if chat_name in self.teams_chat_ids:
+            return self.teams_chat_ids[chat_name]
+        
+        # Split the search term into words
+        search_words = chat_name.lower().split()
+        
+        # Try to find a match by checking if all search words appear in any key
+        for key, chat_id in self.teams_chat_ids.items():
+            key_lower = key.lower()
+            
+            # Check if ALL search words are in the key (strong match)
+            if all(word in key_lower for word in search_words):
+                return chat_id
+        
+        # If still no match, try partial matching (at least one significant word)
+        significant_words = [w for w in search_words if len(w) > 3]  # Skip short words like "de", "da", "por"
+        
+        if significant_words:
+            for key, chat_id in self.teams_chat_ids.items():
+                key_lower = key.lower()
+                
+                # Check if at least half of significant words match
+                matches = sum(1 for word in significant_words if word in key_lower)
+                if matches >= len(significant_words) / 2:
+                    return chat_id
+        
+        return ""
+    
+    def open_teams_chat(self, item):
+        try:
+            values = self.tree.item(item)['values']
+            
+            if values:
+                chat_name = values[5] if len(values) > 5 else ""
+                
+                # Use the search method to find the chat_id
+                chat_id = self.find_chat_id(chat_name)
+                
+                temp_data = {
+                    'row_text': "\n".join([f"{val}" for val in values]),
+                    'values': values,
+                    'chat_name': chat_name,
+                    'chat_id': chat_id,
+                    'item_id': item
+                }
+                
+                if temp_data['chat_id']:
+                    #link = f"https://teams.cloud.microsoft/l/chat/19:{temp_data['chat_id']}@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
+                    link = f"https://teams.cloud.microsoft/l/chat/19:fc9176a569904180bbfa3eeb1bd52651@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
+                    webbrowser.open(link)
+                else:
+                    
+                    #print(f"Available chat names: {list(self.teams_chat_ids.keys())}")
+                    messagebox.showwarning("Aviso", f"Chat ID não encontrado para: {chat_name}")
+                        
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao abrir chat:\n{str(e)}")
+
+    def send_to_printer(self,values):
+        print('send_to_printer')
+
+    def open_sharepoint_link(self, url):
+        url = self.get_sharepoint_url(url)
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao abrir o link:\n{str(e)}")
+            self.status_label.config(text="Falha ao abrir link")
+            
+    def get_sharepoint_url(self, os_code):
+        if not os_code:
+            return ""
+        os_year = os_code[-4:]
+        os_parts = os_code.split('/')
+        os_code_num = os_parts[0].lstrip('0')
+        os_code_num = format_os_code(os_code_num) if os_code_num else ""
+        return f"https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Atendimento%20ao%20Cliente/E%20-%20Ordens%20de%20Servi%C3%A7o/{os_year}/{os_code_num}"
+    
+
+    def copy_to_clipboard(self, text):
+        
+        try:
+            self.frame_certificados.clipboard_clear()
+            self.frame_certificados.clipboard_append(self.get_sharepoint_url(text))
+            self.status_label.config(text="Link copiado para a área de transferência!")
+            messagebox.showinfo("Sucesso", "Link copiado para a área de transferência!")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao copiar:\n{str(e)}")
+
+    def copy_row_data(self, item):
+        
+        try:
+            values = self.tree.item(item)['values']
+
+            if values:
+                
+
+                row_text = "\n".join([f"{val}" for val in values])
+                
+                self.frame_certificados.clipboard_clear()
+                self.frame_certificados.clipboard_append(row_text)
+                self.status_label.config(text="Linha copiada para a área de transferência!")
+                messagebox.showinfo("Sucesso", "Dados da linha copiados para a área de transferência!")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao copiar linha:\n{str(e)}")
+
+    def select_all_rows(self):
+        
+        all_items = self.tree.get_children()
+        for item in all_items:
+            self.tree.selection_add(item)
+        self.status_label.config(text=f"{len(all_items)} linhas selecionadas")
+        
+        ##self.btn_gerar.config(state="enabled")
+        self.btn_visualizar.config(state="enabled")
+        self.btn_limpar.config(state="enabled")
+
+    def execute_query(self, where_clause=None,groupby_clause=None):
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            sql = """
+              
+            SELECT 
+                os.code 'OS',
+                CONVERT(VARCHAR(10), os.receiving_date, 103) as 'Recebimento',
+                CONVERT(VARCHAR(10), os.date_finished, 103) as 'Entrega',
+                CASE 
+                    WHEN datediff(d, os.date_finished, GETDATE()) = 0 THEN 'Hoje'
+                    WHEN datediff(d, os.date_finished, GETDATE()) > 0 THEN 'Atraso'
+                    WHEN os.date_finished >= DATEADD(wk, DATEDIFF(wk, 0, GETDATE()), 0) AND os.date_finished < DATEADD(wk, DATEDIFF(wk, 0, GETDATE()) + 1, 0) THEN 'Esta semana'
+                    WHEN os.date_finished >= DATEADD(wk, DATEDIFF(wk, 0, GETDATE()) + 1, 0) AND os.date_finished < DATEADD(wk, DATEDIFF(wk, 0, GETDATE()) + 2, 0) THEN 'Próxima semana'
+                    ELSE 'Futuro'
+                END as 'Status',
+                i.code as 'Item',
+                s.name as 'Setor'
+            FROM sectors s
+            LEFT JOIN instruments i ON i.id_current_sector = s.id
+            LEFT JOIN orders_services os ON os.id = i.id_service_order
+
+            """
+
+    #############
+            if where_clause:
+                sql += f" WHERE {where_clause}"
+            
+            if groupby_clause:
+                sql += f" GROUP BY {groupby_clause}"
+            
+            sql += " ORDER BY os.date_finished ASC"
+            
+            rs.Open(sql, conn)
+            
+            results = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    row = []
+                    for i in range(rs.Fields.Count):
+                        value = rs.Fields(i).Value
+                        row.append(value if value is not None else "")
+                        
+                    os_parts = row[0].split('/')
+                    os_code = os_parts[0].lstrip('0')
+                    os_code = f"{os_code}/{os_parts[1]}"
+                    row[0] = os_code
+
+                    #row[0] = f"https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Atendimento%20ao%20Cliente/E%20-%20Ordens%20de%20Servi%C3%A7o/{row[0]}{os_year}/{os_code}"
+                    
+                    results.append(row)
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            return results
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha na consulta:\n{str(e)}")
+            return []
+        
+    def load_all_records(self):
+        self.status_label.config(text="Carregando Ordens de Serviço...", font=("Segoe UI", 12))
+        
+        #self.status_label.config(text=f"Os dados são inválidos", font=("Segoe UI", 12))
+        self.frame_certificados.update()
+        
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        where_clause = " i.removed = 0 AND os.removed = 0 AND s.id IN (2,5,6,7,8,9,11,25,1026,2030,2033,15,16,2029) AND os.receiving_date > '20250101'"
+        groupby_clause = "s.name, s.id, os.code, os.receiving_date, os.date_finished, i.code"
+        
+        results = self.execute_query(where_clause,groupby_clause)
+        
+        #for row in results:
+        #    self.tree.insert("", "end", values=row)
+        
+        self.status_label.config(text=f"")
+        #self.status_label.config(text=f"Os dados são inválidos")
+        
+        #self.tree.tag_configure('atrasado',     background="#FFD9D9")    
+        #self.tree.tag_configure('hoje',         background="#B7D5F5")        
+        #self.tree.tag_configure('proximo',      background="#E2FFD3")  
+        
+        for row in results:
+            
+            if row[3] == "Atraso":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Atraso',))
+                self.tree.tag_configure('Atraso', background="#FFD9D9") 
+                
+            elif row[3] == "Hoje":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Hoje',))
+                self.tree.tag_configure('Hoje', background="#98C0EB") 
+
+            elif row[3] == "Esta semana":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Esta semana',))
+                self.tree.tag_configure('Esta semana', background="#B7D5F5") 
+            
+            elif row[3] == "Próxima semana":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Próximo',))
+                self.tree.tag_configure('Próximo', background="#D4E4F5")
+
+            elif row[3] == "Futuro":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Futuro',))
+                self.tree.tag_configure('Futuro', background="#E4EEF8")
+            
+            else:
+                self.tree.insert("", "end", values=row)
+    
+    def perform_search(self):
+        search_term = self.search_entry.get().strip()
+        
+        if not search_term:
+            self.load_all_records()
+            return
+        
+        #self.status_label.config(text=f"Buscando por '{search_term}'...")
+        self.status_label.config(text=f"A busca de dados é inválida")
+        self.frame_certificados.update()
+        
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        where_clause = f"(i.code LIKE '%{search_term}%' or s.name LIKE '%{search_term}%' or os.code LIKE '%{search_term}%') AND s.removed = 0 AND i.removed = 0 AND os.removed = 0 AND s.id IN (2,5,6,7,8,9,11,25,1026,2030,2033,15,16,2029) AND os.receiving_date > '20250101'"
+
+        groupby_clause = " s.name, s.id, os.code, os.receiving_date, os.date_finished, i.code"
+        #where_clause = f""
+        
+        results = self.execute_query(where_clause,groupby_clause)
+                
+        for row in results:
+            
+            if row[3] == "Atraso":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Atraso',))
+                self.tree.tag_configure('Atraso', background="#FFD9D9") 
+                
+            elif row[3] == "Hoje":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Hoje',))
+                self.tree.tag_configure('Hoje', background="#98C0EB") 
+
+            elif row[3] == "Esta semana":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Esta semana',))
+                self.tree.tag_configure('Esta semana', background="#B7D5F5") 
+            
+            elif row[3] == "Próxima semana":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Próximo',))
+                self.tree.tag_configure('Próximo', background="#D4E4F5")
+
+            elif row[3] == "Futuro":
+                item_id = self.tree.insert("", "end", values=row)
+                self.tree.item(item_id, tags=('Futuro',))
+                self.tree.tag_configure('Futuro', background="#E4EEF8")
+            
+            else:
+                self.tree.insert("", "end", values=row)
+    
+        self.status_label.config(text=f"Encontrados {len(results)} itens para '{search_term}'")
+        #self.status_label.config(text=f"Os dados são inválidos")
+    
+    
+    def on_select(self, event):
+        selected = self.tree.selection()
+        if len(selected) > 1:
+            self.status_label.config(text=f"{len(selected)} itens selecionados")
+            self.btn_visualizar.config(state="enabled")
+            self.btn_limpar.config(state="enabled")
+        elif len(selected) == 1:
+            self.status_label.config(text=f"{len(selected)} item selecionado")
+            self.btn_visualizar.config(state="enabled")
+            self.btn_limpar.config(state="enabled")
+        else:
+            self.status_label.config(text=f"Nenhum item selecionado")
+            self.btn_visualizar.config(state="disabled")
+            self.btn_limpar.config(state="disabled")
+    
+    def get_selected_data(self):
+        selected_items = self.tree.selection()
+        selected_data = []
+        
+        for item in selected_items:
+            values = self.tree.item(item)['values']
+            selected_data.append({
+                'sharepoint': f"{values[0]}/Cliente",
+                'ordem_servico': values[1].lstrip('0'),
+                'certificado': values[2],
+                'item': values[3],
+                'data_calibracao': values[4],
+                'cliente': values[5]
+            })
+        
+        return selected_data
+    
+    def print_selected(self):
+        selected_data = self.get_selected_data()
+        
+        if not selected_data:
+            messagebox.showinfo("Aviso", "Nenhum item selecionado para visualizar.")
+            return
+        
+        print_window = tk.Toplevel(self.frame_certificados)
+        print_window.title("Registros Selecionados")
+        print_window.geometry("900x500")
+        print_window.configure(bg=self.cor_fundo)
+        
+        #title_label = tk.Label(print_window, text="VISUALIZAÇÃO DE DADOS", font=("Segoe UI", 12, "bold"), bg=self.cor_fundo, fg="white")
+        #title_label.pack(pady=35)
+        
+        text_frame = ttk.Frame(print_window)
+        text_frame.pack(pady=10, padx=10, expand=True, fill="both")
+        
+        text_widget = tk.Text(text_frame, wrap="word", font=("Consolas", 10))
+        scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        
+        scrollbar.pack(side="right", fill="y")
+        text_widget.pack(side="left", expand=True, fill="both")
+        
+        output_text = f"{'='*70}\n"
+        output_text += f"Total de itens selecionados: {len(selected_data)}\n"
+        output_text += f"{'='*70}\n\n"
+        
+        for i, item in enumerate(selected_data, 1):
+            output_text += f"Certificado n° {item['certificado']}:\n\n"
+            
+            output_text += f"{item['sharepoint']}\n"
+            output_text += f"{item['ordem_servico']}\n"
+            output_text += f"{item['certificado']}\n"
+            output_text += f"{item['item']}\n"
+            output_text += f"{item['data_calibracao']}\n"
+            output_text += f"{item['cliente']}\n"
+            
+            output_text += f"{'-'*40}\n\n"
+
+        text_widget.insert("1.0", output_text)
+        text_widget.config(state="disabled")
+        
+    def clear_selection(self):
+        for item in self.tree.selection():
+            self.tree.selection_remove(item)
+        self.status_label.config(text="Seleção limpa")
+
+
+
 # ==================== MAIN ====================
 status_servidor, cor_status = verificar_disponibilidade3()
 status_servidor3, cor_status3 = status_servidor, cor_status
 
 root = tk.Tk()
 root.title("Assistente de Agenda")
-root.geometry("900x500")
-root.minsize(1150, 675)
+root.geometry("550x675")
+root.minsize(650, 675)
 cor_fundo = _from_rgb((27, 75, 159))
 root.configure(bg=cor_fundo)
 
@@ -2432,11 +3158,13 @@ style.configure("TLabel", background=cor_fundo, foreground="white", font=("Segoe
 
 notebook = ttk.Notebook(root)
 notebook.pack(expand=True, fill="both")
+LabSelector(notebook, cor_fundo)
+db_viewer6 = DatabaseViewer6(notebook, STR_CONN_LINKED, cor_fundo)         ### VISTA GERAL DE ORDENS DE SERVIÇO
 
-for lab_code, lab_config in LABS.items():
-    
-    ServiceScheduler(notebook, STR_CONN, cor_fundo,id_sector=lab_config['sector_id'],lab_name=lab_config['name'],lab_config=lab_config)
-    ServiceSchedulerLinkedDirect(notebook, STR_CONN_LINKED, STR_CONN, cor_fundo,lab_code=lab_code,lab_config=lab_config)
+#for lab_code, lab_config in LABS.items():
+#    
+#    ServiceScheduler(notebook, STR_CONN, cor_fundo,id_sector=lab_config['sector_id'],lab_name=lab_config['name'],lab_config=lab_config)
+#    ServiceSchedulerLinkedDirect(notebook, STR_CONN_LINKED, STR_CONN, cor_fundo,lab_code=lab_code,lab_config=lab_config)
     
 frame_info = ttk.Frame(notebook)
 notebook.add(frame_info, text=" Dados de Conexão & Informações ")
@@ -2452,6 +3180,7 @@ main_canvas.create_window((0, 0), window=content_frame, anchor="nw", width=main_
 
 def configure_scroll_region(event):
     main_canvas.configure(scrollregion=main_canvas.bbox("all"))
+    
 content_frame.bind("<Configure>", configure_scroll_region)
 main_canvas.bind("<Configure>", lambda e: main_canvas.itemconfig("all", width=e.width))
 
@@ -2479,3 +3208,5 @@ def open_link(event):
 credits.bind("<Button-1>", open_link)
 
 root.mainloop()
+
+#pyinstaller --onefile --hidden-import PIL --hidden-import PIL._imagingtk --hidden-import PIL._tkinter_finder C:\Users\AdmPGE\OneDrive - Sistema Fiergs\Área de Trabalho\Castro\Impressora\Castro_Services\Assistente de Agenda 13.py
