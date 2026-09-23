@@ -6,7 +6,7 @@ from datetime import time, datetime, timedelta, date
 import random
 import webbrowser
 import calendar as cal
-from dateutil.relativedelta import relativedelta        
+from dateutil.relativedelta import relativedelta
 from getpass import getuser
 from urllib.parse import quote
 import socket
@@ -44,7 +44,6 @@ STR_CONN = (
     f"User ID=sa;"
     f"Password=Wheelp0p2;"
 )
-
 
 STR_CONN_LINKED = (
     f"Provider=SQLOLEDB;"
@@ -216,7 +215,6 @@ class LabSelector:
         
         context_menu.post(event.x_root, event.y_root)
 
-
     def open_teams_chat(self, lab_config):
         chat_id = lab_config.get('teams_chat_id', '')
         if chat_id:
@@ -226,6 +224,7 @@ class LabSelector:
     def open_lab(self, lab_code, lab_config):
         """Open lab calendar + services in a new window"""
         lab_window = tk.Toplevel(self.frame)
+        lab_window.transient(self.frame)
         lab_window.geometry("1150x700")
         lab_window.minsize(900, 600)
         lab_window.title(f"Calendário - Laboratório de {lab_config['name']}")
@@ -234,14 +233,9 @@ class LabSelector:
         lab_notebook = ttk.Notebook(lab_window)
         lab_notebook.pack(fill='both', expand=True)
         
-        ServiceScheduler(lab_notebook, STR_CONN, self.cor_fundo,
-                        id_sector=lab_config['sector_id'],
-                        lab_name=lab_config['name'],
-                        lab_config=lab_config)
+        ServiceScheduler(lab_notebook, STR_CONN, self.cor_fundo,id_sector=lab_config['sector_id'],lab_name=lab_config['name'],lab_config=lab_config)
         
-        ServiceSchedulerLinkedDirect(lab_notebook, STR_CONN_LINKED, STR_CONN, 
-                                      self.cor_fundo, lab_code=lab_code, 
-                                      lab_config=lab_config)
+        ServiceSchedulerLinkedDirect(lab_notebook, STR_CONN_LINKED, STR_CONN, self.cor_fundo, lab_code=lab_code, lab_config=lab_config)
 
 
 # ==================== SERVICE SCHEDULER (MULTI-LAB) ====================
@@ -764,10 +758,11 @@ class ServiceScheduler:
         
         if count == 1:
             context_menu.add_command(label=f"Ver serviço", command=lambda k=calendar_key: self.show_day_orders(k))
+            context_menu.add_separator()
         elif count > 1:
             context_menu.add_command(label=f"Ver serviços", command=lambda k=calendar_key: self.show_day_orders(k))
+            context_menu.add_separator()
         
-        context_menu.add_separator()
         context_menu.add_command(label=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat)
         
         exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
@@ -780,11 +775,14 @@ class ServiceScheduler:
             if len(exceptions) > 1:
                 context_menu.add_command(label=f"Remover bloqueios de agenda deste dia", command=lambda k=calendar_key: self.remove_day_exceptions(k))
         
-        context_menu.add_separator()
         if count == 1:
+            
+            context_menu.add_separator()
             context_menu.add_command(label=f"Reagendar o serviço para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
             context_menu.add_command(label=f"Reagendar o serviço automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
         elif count > 1:
+            
+            context_menu.add_separator()
             context_menu.add_command(label=f"Reagendar todos os serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
             context_menu.add_command(label=f"Reagendar todos os serviços automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
         
@@ -1454,15 +1452,21 @@ class ServiceScheduler:
         values = tree.item(selected[0])['values']
         os_code = values[1] if len(values) > 1 else ""
         
+                # NEW: View details of selected service
+        if selected_count == 1:
+            context_menu.add_command(label="Visualizar o serviço selecionado [Em desenvolvimento]",command=lambda t=tree: self.show_service_details(t))
+        else:
+            context_menu.add_command(label=f"Visualizar os {selected_count} serviços selecionados [Em desenvolvimento]",command=lambda t=tree: self.show_service_details(t))
+        
+        context_menu.add_separator()
+        context_menu.add_command(label=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat)        
+
         if os_code:
             sharepoint_url = self.get_sharepoint_url(os_code)
             if sharepoint_url:
                 context_menu.add_command(label="Abrir link do SharePoint", command=lambda u=sharepoint_url: webbrowser.open(u))
                 context_menu.add_command(label="Copiar link do SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
-    
-        context_menu.add_separator()
-        context_menu.add_command(label=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat)
-        context_menu.add_separator()
+
         context_menu.add_command(label="Abrir diretório da planilha de cálculo", command=lambda: self.open_teams_link_planilha(None))
         
         if calendar_key and total_count > 0:
@@ -1475,6 +1479,66 @@ class ServiceScheduler:
                 context_menu.add_command(label=f"Reagendar os {selected_count} serviços selecionados automaticamente", command=lambda t=tree, s=selected: self.reschedule_selected_services(t, s))
         
         context_menu.post(event.x_root, event.y_root)
+
+    def show_service_details(self, tree):
+        """Show detailed view of selected service(s)"""
+        selected = tree.selection()
+        if not selected:
+            return
+        
+        detail_window = tk.Toplevel(self.frame_certificados)
+        detail_window.title(f"Detalhes {'do serviço' if len(selected)==1 else 'dos serviços'}")
+        detail_window.geometry("700x450")
+        detail_window.configure(bg=self.cor_fundo)
+        #detail_window.attributes('-topmost', True)
+        detail_window.transient(self.frame_certificados)
+        text_frame = ttk.Frame(detail_window)
+        text_frame.pack(pady=10, padx=10, expand=True, fill="both")
+        
+        text_widget = tk.Text(text_frame, wrap="word", font=("Consolas", 10), bg='white', fg='black')
+        scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        
+        scrollbar.pack(side="right", fill="y")
+        text_widget.pack(side="left", expand=True, fill="both")
+        
+        output_text = f"{'='*70}\n"
+        output_text += f"Total de itens selecionados: {len(selected)}\n"
+        #output_text += f"Laboratório de {self.lab_name}\n"
+        output_text += f"{'='*70}\n\n"
+        
+        for i, item_id in enumerate(selected, 1):
+            values = tree.item(item_id)['values']
+            
+            os_code = values[1]
+            if os_code:
+                sharepoint_url = self.get_sharepoint_url(os_code)
+                output_text += f"{sharepoint_url}\n" #SHAREPOINT
+                
+            output_text += f"{values[1]}\n" #OS
+
+            output_text += f"\n" #CERTIFICADO
+            output_text += f"\n" #TAG
+            output_text += f"\n" #DATA CALIBRAÇÃO
+            
+            #output_text += f"Horário:    {values[0]}\n"
+            #output_text += f"Item:       {values[2]}\n"
+            #output_text += f"Serviço:    {values[3]}\n"
+            #output_text += f"Descrição:  {values[4]}\n"
+            #output_text += f"Duração:    {values[5]}\n"
+            #output_text += f"Código:     {values[6]}\n"
+            
+            #SHAREPOINT, OS, CERTIFICADO, TAG, DATA CALIBRAÇÃO, CLIENTE, ENDEREÇO, CONTATO
+
+
+
+            output_text += f"\n{'-'*40}\n\n"
+        
+        text_widget.insert("1.0", output_text)
+        text_widget.config(state="disabled")
+        
+        # Close button
+        ttk.Button(detail_window, text="Fechar", command=detail_window.destroy).pack(pady=(0, 10))
 
     def reschedule_selected_services(self, tree, selected_items):
         popup = tree.winfo_toplevel()
@@ -2441,6 +2505,8 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         popup.configure(bg='black')
         popup.title("Adicionar Bloqueio ao Calendário")
         
+        popup.transient(self.frame_certificados)
+        
         tk.Label(popup, text="Data:", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(15, 0))
         
         date_frame = tk.Frame(popup, bg='black')
@@ -3098,6 +3164,7 @@ class DatabaseViewer6: ### VISTA GERAL
         print_window.title("Registros Selecionados")
         print_window.geometry("900x500")
         print_window.configure(bg=self.cor_fundo)
+        print_window.transient(self.frame_certificados)
         
         #title_label = tk.Label(print_window, text="VISUALIZAÇÃO DE DADOS", font=("Segoe UI", 12, "bold"), bg=self.cor_fundo, fg="white")
         #title_label.pack(pady=35)
@@ -3209,4 +3276,4 @@ credits.bind("<Button-1>", open_link)
 
 root.mainloop()
 
-#pyinstaller --onefile --hidden-import PIL --hidden-import PIL._imagingtk --hidden-import PIL._tkinter_finder C:\Users\AdmPGE\OneDrive - Sistema Fiergs\Área de Trabalho\Castro\Impressora\Castro_Services\Assistente de Agenda 13.py
+#PIL PIL._imagingtk PIL._tkinter_finder
