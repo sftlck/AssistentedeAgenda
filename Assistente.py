@@ -1179,25 +1179,23 @@ class ServiceScheduler:
         tk.Label(date_frame, text="/", bg=self.cor_fundo, fg='white').pack(side='left')
         ttk.Entry(date_frame, textvariable=year_var, width=5).pack(side='left')
         
-        tk.Label(popup, text="Horário de início (HH:MM):", font=('Segoe UI', 9),
-                bg=self.cor_fundo, fg='white').pack(anchor='w', padx=30, pady=(10, 0))
+        tk.Label(popup, text="Horário de início (HH:MM):", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white').pack(anchor='w', padx=30, pady=(10, 0))
         
         time_var = tk.StringVar(value="08:00")
         ttk.Entry(popup, textvariable=time_var, width=10).pack(anchor='w', padx=30, pady=(2, 5))
         
-        tk.Label(popup, text="⚠ Os serviços serão agendados em sequência\n   a partir desta data e horário.",
-                font=('Segoe UI', 8), bg=self.cor_fundo, fg='#FFD700').pack(pady=(10, 5))
+        tk.Label(popup, text="⚠ Os serviços serão agendados em sequência\n   a partir desta data e horário.",font=('Segoe UI', 8), bg=self.cor_fundo, fg='#FFD700').pack(pady=(10, 5))
         
         btn_frame = tk.Frame(popup, bg=self.cor_fundo)
         btn_frame.pack(pady=15)
-        
-        ttk.Button(btn_frame, text=" Confirmar Reagendamento ",
-                command=lambda: self._execute_manual_reschedule(calendar_key, popup, day_var, month_var, year_var, time_var)
-                ).pack(side='left', padx=5)
+        print('meme')
+        ttk.Button(btn_frame, text=" Confirmar Reagendamento ",command=lambda: self._execute_manual_reschedule(calendar_key, popup, day_var, month_var, year_var, time_var)).pack(side='left', padx=5)
         ttk.Button(btn_frame, text=" Cancelar ", command=popup.destroy).pack(side='left', padx=5)
 
     def _execute_manual_reschedule(self, calendar_key, popup, day_var, month_var, year_var, time_var):
         try:
+            
+            print('meme2')
             day = day_var.get().strip().zfill(2)
             month = month_var.get().strip().zfill(2)
             year = year_var.get().strip()
@@ -1465,7 +1463,7 @@ class ServiceScheduler:
             sharepoint_url = self.get_sharepoint_url(os_code)
             if sharepoint_url:
                 context_menu.add_command(label="Abrir link do SharePoint", command=lambda u=sharepoint_url: webbrowser.open(u))
-                context_menu.add_command(label="Copiar link do SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
+                #context_menu.add_command(label="Copiar link do SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
 
         context_menu.add_command(label="Abrir diretório da planilha de cálculo", command=lambda: self.open_teams_link_planilha(None))
         
@@ -1475,7 +1473,7 @@ class ServiceScheduler:
                 context_menu.add_command(label=f"Reagendar TODOS os serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
                 context_menu.add_command(label="Reagendar o serviço selecionado automaticamente", command=lambda t=tree, s=selected: self.reschedule_selected_services(t, s))
             else:
-                context_menu.add_command(label=f"Reagendar os {selected_count} serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
+                context_menu.add_command(label=f"Reagendar TODOS serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
                 context_menu.add_command(label=f"Reagendar os {selected_count} serviços selecionados automaticamente", command=lambda t=tree, s=selected: self.reschedule_selected_services(t, s))
         
         context_menu.post(event.x_root, event.y_root)
@@ -1651,6 +1649,11 @@ class ServiceScheduler:
             self.status_label.config(text=f"Erro ao carregar serviços: {str(e)}")
 
     def clear_all_scheduled(self):
+        
+        confirm = messagebox.askyesno("Info agendamento", f"Tem certeza de que deseja limpar a agenda de serviços de Laboratório de {self.lab_name}?")
+
+        if not confirm:
+            return
         try:
             conn = win32com.client.Dispatch("ADODB.Connection")
             conn.Open(self.str_conn)
@@ -1661,8 +1664,9 @@ class ServiceScheduler:
             self.load_calendar_data()
             self.render_calendar()
             self.update_queue_count()
-            self.status_label.config(text="Os registros da agenda foram removidos")
-            messagebox.showinfo("Sucesso", "Todos os agendamentos foram removidos!")
+            self.status_label.config(text=f"Os agendamentos de serviços da agenda de {self.lab_name} foram removidos")
+            messagebox.showinfo("Sucesso", f"Todos os agendamentos de serviços foram removidos de Laboratório de {self.lab_name}!")
+
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao limpar agenda:\n{str(e)}")
 
@@ -1931,6 +1935,8 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             rs = win32com.client.Dispatch("ADODB.Recordset")
             conn.Open(self.str_conn)
 
+            print('self.str_conn',self.str_conn)
+
             sql = f"""
                 SELECT 
                     os.code AS 'OS',
@@ -1957,32 +1963,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                 AND sm.code LIKE '%631{lab_code.lower()}%'
                 ORDER BY os.receiving_date ASC
             """
-            #sql = f"""
-            #    SELECT 
-            #        os.code AS 'OS',
-            #        i.code AS 'Item',
-            #        sm.specification AS 'Especificação',
-            #        sm.description AS 'Descrição',
-            #        sm.code AS 'Code',
-            #        sm.execution_time AS 'execution_time'
-#
-            #    FROM instruments_services iss
-#
-            #    LEFT JOIN orders_services AS os ON os.id = iss.id_service_order 
-            #    LEFT JOIN service_modes AS sm ON sm.id = iss.id_service
-            #    LEFT JOIN instruments AS i ON i.id = iss.id_instrument AND i.id_service_order = os.id
-            #    LEFT JOIN budgets AS b ON b.id_order_service = os.id
-#
-            #    WHERE os.removed = 0
-            #    AND iss.removed = 0
-            #    AND sm.removed = 0
-            #    AND i.removed = 0
-            #    AND b.is_last_revision = 1
-            #    --AND (i.id_current_sector = {sector_id} OR i.id_current_sector = 1)
-            #    AND (i.id_current_sector = {sector_id})
-            #    AND sm.code LIKE '%631{lab_code.lower()}%'
-            #"""
-            #print('sql\n\n',sql)
+            
             rs.Open(sql, conn)
             
             if not rs.EOF:
@@ -2503,7 +2484,9 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         popup.geometry("550x300")
         popup.minsize(400, 350)
         popup.configure(bg='black')
-        popup.title("Adicionar Bloqueio ao Calendário")
+        
+        lab_name = self.lab_config.get('name', '')
+        popup.title(f"Adicionar Bloqueio ao Calendário - Laboratório de {lab_name}")
         
         popup.transient(self.frame_certificados)
         
@@ -3204,6 +3187,357 @@ class DatabaseViewer6: ### VISTA GERAL
         self.status_label.config(text="Seleção limpa")
 
 
+class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
+    
+    def __init__(self, parent_notebook, str_conn, cor_fundo):
+        self.str_conn = str_conn
+        self.cor_fundo = cor_fundo
+        self.selected_items = []
+        self.frame_certificados = ttk.Frame(parent_notebook)
+        parent_notebook.add(self.frame_certificados, text=" Orçamentos ")
+        
+        self.setup_ui()
+    
+    def on_entry_focus_in(self, event):
+        if self.search_entry.get() == self.placeholder_text:
+            self.search_entry.delete(0, 'end')
+            self.search_entry.configure(style='TEntry')
+
+    def on_entry_focus_out(self, event):
+        if not self.search_entry.get():
+            self.search_entry.insert(0, self.placeholder_text)
+            style = ttk.Style()
+            self.search_entry.configure(style='Placeholder.TEntry')
+        
+    def setup_ui(self):
+        search_frame = ttk.Frame(self.frame_certificados)
+        search_frame.pack(pady=10, padx=10, fill="x")
+        
+        self.greetings = ttk.Label(search_frame, text=f"{buenas}", font=("Segoe UI", 10), background='black')
+        self.greetings.pack(side="left", padx=5)
+        
+        # Search by customer name
+        tk.Label(search_frame, text="Cliente:", font=('Segoe UI', 9), 
+                bg=self.cor_fundo, fg='white').pack(side="left", padx=(10, 5))
+        
+        self.search_entry = ttk.Entry(search_frame, width=40)
+        self.search_entry.pack(side="left", padx=5)
+        self.search_entry.bind('<Return>', lambda e: self.perform_search())
+
+        style = ttk.Style()
+        style.configure('Placeholder.TEntry', foreground='#7D7D7D')
+
+        self.placeholder_text = "Digite o nome do cliente..."
+        self.search_entry.insert(0, self.placeholder_text)
+        self.search_entry.configure(style='Placeholder.TEntry')
+
+        self.search_entry.bind('<FocusIn>', self.on_entry_focus_in)
+        self.search_entry.bind('<FocusOut>', self.on_entry_focus_out)
+
+        ttk.Button(search_frame, text="Buscar", command=self.perform_search).pack(side="left", padx=5)
+        ttk.Button(search_frame, text="Mostrar Todos", command=self.load_all_records).pack(side="left", padx=5)
+
+        tree_frame = ttk.Frame(self.frame_certificados)
+        tree_frame.pack(pady=10, padx=10, expand=True, fill="both")
+        
+        tree_scroll_y = ttk.Scrollbar(tree_frame)
+        tree_scroll_y.pack(side="right", fill="y")
+        
+        tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
+        tree_scroll_x.pack(side="bottom", fill="x")
+        
+        columns = (
+            "Cliente",
+            "Instrumento",
+            "Código",
+            "Modelo",
+            "Nº Série",
+            "Serviço",
+            "Aprovação",
+            "Orçamento",
+            "Valor (R$)",
+            #"Desconto (%)"
+        )
+        
+        self.tree = ttk.Treeview(
+            tree_frame, 
+            columns=columns, 
+            show="headings", 
+            yscrollcommand=tree_scroll_y.set, 
+            xscrollcommand=tree_scroll_x.set, 
+            selectmode="extended"
+        )
+        
+        tree_scroll_y.config(command=self.tree.yview)
+        tree_scroll_x.config(command=self.tree.xview)
+        
+        column_widths = {
+            "Instrumento": 120,
+            "Código": 80,
+            "Modelo": 100,
+            "Nº Série": 80,
+            "Serviço": 180,
+            "Aprovação": 80,
+            "Orçamento": 80,
+            "Valor (R$)": 80,
+            #"Desconto (%)": 80
+        }
+        
+        for col in columns:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, width=column_widths.get(col, 80), minwidth=50)
+        
+        self.tree.pack(expand=True, fill="both")
+        
+        self.tree.bind('<Button-3>', self.show_context_menu)
+        self.tree.bind('<<TreeviewSelect>>', self.on_select)
+        
+        button_frame = ttk.Frame(self.frame_certificados)
+        button_frame.pack(pady=10, padx=10, fill="x")
+        self.btn_visualizar = ttk.Button(button_frame, text="Visualizar Selecionado(s)", command=self.print_selected)
+        self.btn_visualizar.pack(side="left", padx=5)
+        self.btn_visualizar.config(state="disabled")
+
+        self.btn_limpar = ttk.Button(button_frame, text="Limpar Seleção", command=self.clear_selection)
+        self.btn_limpar.pack(side="left", padx=5)
+        self.btn_limpar.config(state="disabled")
+
+        self.status_label = ttk.Label(self.frame_certificados, text="Busque por um cliente para visualizar orçamentos", font=("Segoe UI", 9))
+        self.status_label.pack(pady=5)
+    
+    def show_context_menu(self, event):
+        item = self.tree.identify_row(event.y)
+        
+        if item:
+            self.tree.selection_set(item)
+            
+            context_menu = tk.Menu(self.tree, tearoff=0)
+            
+            context_menu.add_command(label="Visualizar Selecionado", command=self.print_selected)
+            context_menu.add_command(label="Copiar linha", command=lambda i=item: self.copy_row_data(i))
+            
+            context_menu.post(event.x_root, event.y_root)
+
+    def copy_to_clipboard(self, text):
+        try:
+            self.frame_certificados.clipboard_clear()
+            self.frame_certificados.clipboard_append(text)
+            self.status_label.config(text="Copiado!")
+        except Exception:
+            pass
+
+    def copy_row_data(self, item):
+        try:
+            values = self.tree.item(item)['values']
+            row_text = "\n".join([f"{val}" for val in values])
+            self.frame_certificados.clipboard_clear()
+            self.frame_certificados.clipboard_append(row_text)
+            self.status_label.config(text="Linha copiada!")
+            messagebox.showinfo("Sucesso", "Dados da linha copiados!")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao copiar:\n{str(e)}")
+    
+    def execute_query(self, where_clause=None):
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            sql = """
+                SELECT 
+
+                    c.name AS 'Cliente',
+                    it.name AS 'Instrumento',
+                    i.code AS 'Código',
+                    im.name AS 'Modelo',
+                    i.serial_number AS 'Nº Série',
+                    sm.specification AS 'Serviço',
+                    CONVERT(VARCHAR(10), iss.approve_date, 103) AS 'Aprovação',
+                    b.code AS 'Orçamento',
+                    ROUND((bi.unitary_value - CASE WHEN b.id_discount_type = 1 THEN (bi.unitary_value * bi.discount / 100.0) ELSE 0 END), 2) AS 'Valor'
+                    --((((CASE WHEN b.id_discount_type = 1 THEN (bi.unitary_value * bi.discount / 100.0) ELSE 0 END)/bi.unitary_value)*100), 2) AS 'Desconto'
+
+                FROM instruments i
+                LEFT JOIN instruments_models im ON im.id = i.id_instrument_model
+                LEFT JOIN instrument_types it ON it.id = i.id_instrument_type
+                LEFT JOIN instruments_services iss ON iss.id_instrument = i.id
+                LEFT JOIN service_modes sm ON sm.id = iss.id_service
+                LEFT JOIN budgets_items_details bid ON bid.id = iss.id_budget_item_detail
+                LEFT JOIN budgets_items bi ON bi.id = bid.id_budget_item
+                LEFT JOIN budgets b ON b.id = bi.id_budget
+                LEFT JOIN customers c on c.id = b.id_customer
+                WHERE i.removed = 0
+            """
+            
+            if where_clause:
+                sql += f" AND {where_clause}"
+            
+            sql += " ORDER BY it.name ASC"
+            
+            rs.Open(sql, conn)
+            
+            results = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    row = []
+                    for i in range(rs.Fields.Count):
+                        value = rs.Fields(i).Value
+                        row.append(value if value is not None else "")
+                    results.append(row)
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            return results
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha na consulta:\n{str(e)}")
+            return []
+        
+    def load_all_records(self):
+        self.status_label.config(text="Carregando orçamentos...", font=("Segoe UI", 12))
+        self.frame_certificados.update()
+        
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        results = self.execute_query()
+        
+        for row in results:
+            self.tree.insert("", "end", values=row)
+            
+        if len(results) == 0:
+            self.status_label.config(text="Nenhum orçamento encontrado")
+        elif len(results) == 1:
+            self.status_label.config(text=f"1 orçamento encontrado")
+        else:
+            self.status_label.config(text=f"{len(results)} orçamentos encontrados")
+    
+    def perform_search(self):
+        search_term = self.search_entry.get().strip()
+        
+        if not search_term or search_term == self.placeholder_text:
+            self.load_all_records()
+            return
+        
+        self.status_label.config(text=f"Buscando por '{search_term}'...")
+        self.frame_certificados.update()
+        
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        # Search by customer name from the linked server
+        where_clause = f"""
+            b.id IN (
+                SELECT b2.id FROM budgets b2
+                LEFT JOIN budgets_items bi2 ON bi2.id_budget = b2.id
+                LEFT JOIN budgets_items_details bid2 ON bid2.id_budget_item = bi2.id
+                LEFT JOIN instruments_services iss2 ON iss2.id_budget_item_detail = bid2.id
+                LEFT JOIN instruments i2 ON i2.id = iss2.id_instrument
+                LEFT JOIN customers c2 ON c2.id = i2.id_customer
+                WHERE c2.name LIKE '%{search_term}%'
+            )
+        """
+        
+        results = self.execute_query(where_clause)
+        
+        for row in results:
+            self.tree.insert("", "end", values=row)
+        
+        self.status_label.config(text=f"Encontrados {len(results)} itens para '{search_term}'")
+    
+    def on_select(self, event):
+        selected = self.tree.selection()
+        if len(selected) > 1:
+            self.status_label.config(text=f"{len(selected)} itens selecionados")
+            self.btn_visualizar.config(state="enabled")
+            self.btn_limpar.config(state="enabled")
+        elif len(selected) == 1:
+            self.status_label.config(text=f"{len(selected)} item selecionado")
+            self.btn_visualizar.config(state="enabled")
+            self.btn_limpar.config(state="enabled")
+        else:
+            self.status_label.config(text=f"Nenhum item selecionado")
+            self.btn_visualizar.config(state="disabled")
+            self.btn_limpar.config(state="disabled")
+    
+    def get_selected_data(self):
+        selected_items = self.tree.selection()
+        selected_data = []
+        
+        for item in selected_items:
+            values = self.tree.item(item)['values']
+            selected_data.append({
+                'cliente':          values[0] if len(values) > 0 else '',
+                'instrumento':      values[1] if len(values) > 1 else '',
+                'codigo':           values[2] if len(values) > 2 else '',
+                'modelo':           values[3] if len(values) > 3 else '',
+                'serie':            values[4] if len(values) > 4 else '',
+                'servico':          values[5] if len(values) > 5 else '',
+                'aprovacao':        values[6] if len(values) > 6 else '',
+                'orcamento':        values[7] if len(values) > 7 else '',
+                #'valor':            round(values[7],2) if len(values) > 7 else '',
+                'valor':            round(values[8],2) if len(values) > 8 else '',
+                #'desconto':         values[8] if len(values) > 8 else ''
+            })
+        
+        return selected_data
+    
+    def print_selected(self):
+        selected_data = self.get_selected_data()
+        
+        if not selected_data:
+            messagebox.showinfo("Aviso", "Nenhum item selecionado para visualizar.")
+            return
+        
+        print_window = tk.Toplevel(self.frame_certificados)
+        print_window.title("Orçamentos Selecionados")
+        print_window.geometry("700x450")
+        print_window.configure(bg=self.cor_fundo)
+        print_window.attributes('-topmost', True)
+        
+        text_frame = ttk.Frame(print_window)
+        text_frame.pack(pady=10, padx=10, expand=True, fill="both")
+        
+        text_widget = tk.Text(text_frame, wrap="word", font=("Consolas", 10), bg='white', fg='black')
+        scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        
+        scrollbar.pack(side="right", fill="y")
+        text_widget.pack(side="left", expand=True, fill="both")
+        
+        output_text = f"{'='*60}\n"
+        output_text += f"ORÇAMENTOS SELECIONADOS\n"
+        output_text += f"Total: {len(selected_data)}\n"
+        output_text += f"{'='*60}\n\n"
+        
+        for i, item in enumerate(selected_data, 1):
+            output_text += f"--- Item {i} ---\n\n"
+            output_text += f"Cliente:    {item['cliente']}\n"
+            output_text += f"Instrumento:    {item['instrumento']}\n"
+            output_text += f"Código:         {item['codigo']}\n"
+            output_text += f"Modelo:         {item['modelo']}\n"
+            output_text += f"Nº Série:       {item['serie']}\n"
+            output_text += f"Serviço:        {item['servico']}\n"
+            output_text += f"Aprovação:      {item['aprovacao']}\n"
+            output_text += f"Orçamento:      {item['orcamento']}\n"
+            output_text += f"Valor:          R$ {round(item['valor'],2)}\n"
+            #output_text += f"Desconto:       {item['desconto']}%\n"
+            output_text += f"\n{'-'*40}\n\n"
+
+        text_widget.insert("1.0", output_text)
+        text_widget.config(state="disabled")
+        
+        ttk.Button(print_window, text="Fechar", command=print_window.destroy).pack(pady=(0, 10))
+        
+    def clear_selection(self):
+        for item in self.tree.selection():
+            self.tree.selection_remove(item)
+        self.status_label.config(text="Seleção limpa")
+
 
 # ==================== MAIN ====================
 status_servidor, cor_status = verificar_disponibilidade3()
@@ -3227,6 +3561,7 @@ notebook = ttk.Notebook(root)
 notebook.pack(expand=True, fill="both")
 LabSelector(notebook, cor_fundo)
 db_viewer6 = DatabaseViewer6(notebook, STR_CONN_LINKED, cor_fundo)         ### VISTA GERAL DE ORDENS DE SERVIÇO
+#db_viewer_orcamentos = DatabaseViewerOrcamentos(notebook, STR_CONN_LINKED, cor_fundo)
 
 #for lab_code, lab_config in LABS.items():
 #    
