@@ -1,6 +1,7 @@
 import win32com.client
 import tkinter as tk
 import win32timezone
+from tkinter import filedialog
 from tkinter import ttk, messagebox
 from datetime import time, datetime, timedelta, date
 import random
@@ -10,6 +11,17 @@ from dateutil.relativedelta import relativedelta
 from getpass import getuser
 from urllib.parse import quote
 import socket
+
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.colors import HexColor
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Paragraph
+
+from reportlab.platypus import Image as RLImage
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+import tempfile
+import os
 
 import base64
 from io import BytesIO
@@ -44,6 +56,7 @@ STR_CONN = (
     f"User ID=sa;"
     f"Password=Wheelp0p2;"
 )
+
 STR_CONN_LINKED = (
     f"Provider=SQLOLEDB;"
     f"Data Source={ip_linked};"
@@ -77,6 +90,8 @@ username = username0.capitalize()
 
 greetings = [
     f' Oi olá  ',
+    f' Vai almoçar na Bete hoje? ',
+    f' E o churras?? ',
     f' Ora ora  ',
     f' Buenas, {username}?  ',
     f' {username}?!  ',
@@ -146,6 +161,44 @@ class LabSelector:
         parent_notebook.add(self.frame, text=" Agenda de Serviços ")
         self._create_lab_buttons()
 
+
+
+    def show_loading_screen(self, message="Carregando..."):
+        
+        self.loading_popup = tk.Toplevel(self.frame)
+        self.loading_popup.geometry("550x130")
+        self.loading_popup.configure(bg=self.cor_fundo)
+        self.loading_popup.title("")
+        self.loading_popup.overrideredirect(True)
+        self.loading_popup.attributes('-topmost', True)
+        
+        # Center on parent
+        self.loading_popup.update_idletasks()
+        x = self.frame.winfo_rootx() + (self.frame.winfo_width() // 2) - 175
+        y = self.frame.winfo_rooty() + (self.frame.winfo_height() // 2) - 65
+        self.loading_popup.geometry(f"+{x}+{y}")
+        
+        frame = tk.Frame(self.loading_popup, bg=self.cor_fundo, highlightbackground="#FFFFFF", highlightthickness=2)
+        frame.pack(fill='both', expand=True, padx=2, pady=2)
+
+        tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+
+        #tk.Label(frame, text=f"Laboratório de {self.lab_name}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
+        
+        # Message
+        tk.Label(frame, text=message, font=('Segoe UI', 11),bg=self.cor_fundo, fg='white').pack(pady=(5, 5))
+        
+        self.loading_popup.grab_set()
+        self.loading_popup.update()
+
+
+    def hide_loading_screen(self):
+        """Hide the loading overlay"""
+        if hasattr(self, 'loading_popup') and self.loading_popup.winfo_exists():
+            self.loading_popup.grab_release()
+            self.loading_popup.destroy()
+
+
     def _create_lab_buttons(self):
         main = tk.Frame(self.frame, bg=self.cor_fundo)
         main.pack(fill='both', expand=True, padx=20, pady=35)
@@ -195,18 +248,257 @@ class LabSelector:
             if col >= max_cols:
                 col = 0
                 row += 1
+        btn_export_all = ttk.Button(main, text="Exportar Programação Geral de Serviços Metrológicos",command=self.export_all_to_pdf, cursor='hand2')
+        btn_export_all.pack(pady=(20, 0))   
+
+    def export_lab_to_pdf(self):
+        """Export current lab's services to PDF - for context menu"""
+        lab_name = self.lab_config.get('name', '')
+        
+        filename = filedialog.asksaveasfilename(defaultextension=".pdf",filetypes=[("PDF files", "*.pdf")],initialfile=f"Programação {lab_name} {datetime.now().strftime('%d-%m-%Y')}.pdf",title=f"Programação - Laboratório de {lab_name}")
+        
+        if not filename:
+            return
+        
+        try:
+            doc = SimpleDocTemplate(filename, pagesize=landscape(A4),leftMargin=15*mm, rightMargin=15*mm,topMargin=15*mm, bottomMargin=15*mm)
+            
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            # Logo
+            try:
+                logo_bytes = base64.b64decode(LOGO_BASE64)
+                logo_img = RLImage(BytesIO(logo_bytes), width=40*mm, height=20*mm)
+                elements.append(logo_img)
+            except:
+                pass
+            
+            elements.append(Paragraph(f"Programação de Serviços - Laboratório de {lab_name}", styles['Title']))
+            elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+            elements.append(Spacer(1, 10*mm))
+            
+            headers = ["OS", "Item", "Tipo", "Especificação", "Código", "Duração", "Status"]
+            data = [headers]
+            
+            for item in self.tree.get_children():
+                values = self.tree.item(item)['values']
+                data.append([
+                    str(values[0]) if values[0] else "",                        # OS
+                    str(values[1]) if values[1] else "",                        # Item
+                    str(values[2])[:50] if values[2] else "",                   # Especificação
+                    str(values[4]) if values[4] else "",                        # Código
+                    str(values[5]) if values[5] else "",                        # Duração
+                    str(values[6]) if len(values) > 6 and values[6] else "",    # Status
+                ])
+            
+            col_widths = [15*mm,15*mm,15*mm, 35*mm, 70*mm, 35*mm, 30*mm, 60*mm]
+
+            table = Table(data, colWidths=col_widths, repeatRows=1)
+            
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 7),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 6),
+                ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F5F7FA')]),
+            ]))
+            
+            elements.append(table)
+            elements.append(Spacer(1, 10*mm))
+            elements.append(Paragraph(f"Total: {len(data) - 1} serviços", styles['Normal']))
+            
+            doc.build(elements)
+            os.startfile(filename)
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao gerar PDF:\n{str(e)}")
+
+    def export_all_to_pdf(self):
+        
+        filename = filedialog.asksaveasfilename(defaultextension=".pdf",filetypes=[("PDF files", "*.pdf")],initialfile=f"Programação Geral {datetime.now().strftime('%d-%m-%Y_%Hh%M')}.pdf",title=f"Programação Geral de Serviços Metrológicos {datetime.now().strftime('%d-%m-%Y')}.pdf")
+        
+        if not filename:
+            return
+        self.show_loading_screen("Programação Geral de Serviços Metrológicos")
+        try:
+            doc = SimpleDocTemplate(filename, pagesize=landscape(A4),leftMargin=15*mm, rightMargin=15*mm,topMargin=15*mm, bottomMargin=15*mm)
+            
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            # Custom lab header style
+            lab_header_style = ParagraphStyle('LabHeader', parent=styles['Heading2'],fontSize=10, textColor=HexColor('#1B4B9F'), spaceBefore=8*mm, spaceAfter=3*mm,borderPadding=(0, 0, 2, 0))
+            
+            # Logo
+            #try:
+            #    logo_bytes = base64.b64decode(LOGO_BASE64)
+            #    logo_img = RLImage(BytesIO(logo_bytes), width=25*mm, height=12*mm)
+            #    elements.append(logo_img)
+            #except Exception as e:
+            #    print(f"Logo error: {e}")
+            
+            #elements.append(Paragraph("Programação Geral de Serviços Metrológicos", styles['Title']))
+            #elements.append(Paragraph(f"Exportado em: {datetime.now().strftime('%d/%m/%Y - %H:%M')}", styles['Normal']))
+            
+            total_all = 0
+            k = 0
+            for lab_code, lab_config in LABS.items():
+                lab_data = []
+                has_data = False
+                
+                try:
+                    conn = win32com.client.Dispatch("ADODB.Connection")
+                    rs = win32com.client.Dispatch("ADODB.Recordset")
+                    conn.Open(STR_CONN_LINKED)
+                    
+                    sql = f"""
+                                            
+                    SELECT 
+                        CONVERT(VARCHAR(10), os.receiving_date , 103) as 'Recebimento',
+                        CONVERT(VARCHAR(10), os.date_finished , 103) as 'Entrega',
+                        os.code AS 'OS',
+                        i.code AS 'Item',
+                        it.name as 'Tipo',
+                        sm.specification AS 'Especificação',
+                        --sm.description AS 'Descrição',
+                        sm.code AS 'Código',
+                        sm.execution_time AS 'execution_time',
+                        sm.id AS 'service_mode_id'
+
+                    FROM instruments_services iss
+
+                    LEFT JOIN orders_services AS os ON os.id = iss.id_service_order 
+                    LEFT JOIN service_modes AS sm ON sm.id = iss.id_service
+                    LEFT JOIN instruments AS i ON i.id = iss.id_instrument AND i.id_service_order = os.id
+                    LEFT JOIN budgets AS b ON b.id_order_service = os.id
+                    LEFT JOIN instrument_types it on it.id = i.id_instrument_type
+
+                    WHERE os.removed = 0
+                    AND iss.removed = 0
+                    AND sm.removed = 0
+                    AND i.removed = 0
+                    AND b.is_last_revision = 1
+                    
+                    AND (i.id_current_sector = {lab_config['sector_id']} or i.id_current_sector = 1)
+                    AND sm.code LIKE '%631{lab_code.lower()}%'
+                    --AND (i.id_current_sector = 5 or i.id_current_sector = 1)
+                    --AND sm.code LIKE '%631CD%'
+                    
+                    ORDER BY os.receiving_date ASC
+                    """
+
+                    rs.Open(sql, conn)
+                    
+                    if not rs.EOF:
+                        rs.MoveFirst()
+                        while not rs.EOF:
+                            duration = self._convert_hhmm_to_minutes(rs.Fields('execution_time').Value)
+                            spec = str(rs.Fields('Especificação').Value or "")
+                            spec_display = spec if len(spec) < 20 else spec[:20] + '...'
+                            
+                            type = str(rs.Fields('Tipo').Value or "")
+                            #type_display = type if len(type) < 10 else type[:10] + '...'
+                            
+                            os_parts = str(rs.Fields('OS')).split('/')
+                            os_code = os_parts[0].lstrip('0')
+                            os_code = f"{os_code}/{os_parts[1]}"
+                            
+                            #item = str(rs.Fields('Item').Value or ""),
+                            #item_display = item if len(item) < 10 else item[:10] + '...'
+
+
+                            # In the loop where you build lab_data, wrap text in Paragraphs:
+                            lab_data.append([
+                                Paragraph(str(rs.Fields('Recebimento').Value or ""),    styles['Normal']),
+                                Paragraph(str(rs.Fields('Entrega').Value or ""),        styles['Normal']),
+                                Paragraph(str(os_code),                                 styles['Normal']),
+                                Paragraph(str(rs.Fields('Item').Value or ""),           styles['Normal']),
+                                Paragraph(type,                                         styles['Normal']),
+                                Paragraph(spec,                                         styles['Normal']),  # Full text, no truncation
+                                Paragraph(str(rs.Fields('Código').Value or ""),         styles['Normal']),
+                                Paragraph(f"{duration} min",                            styles['Normal']),
+                            ])
+                            
+                            rs.MoveNext()
+                        has_data = True
+                    
+                    rs.Close()
+                    conn.Close()
+                except:
+                    lab_data.append(["Erro ao carregar", "", "", "", ""])
+                    
+                    self.hide_loading_screen()
+                    has_data = True
+                
+                if has_data:
+                    # Lab header
+                    count = len(lab_data)
+                    total_all += count
+                    
+                    elements.append(Paragraph("Programação Geral de Serviços Metrológicos", styles['Title']))
+                    elements.append(Paragraph(f"Laboratório de {lab_config['name']}", styles['Title']))
+                    elements.append(Paragraph("[Em desenvolvimento]", styles['Title']))
+                    elements.append(Paragraph(f"{count} {'serviço' if count == 1 else 'serviços'}",lab_header_style))
+
+                    # Table for this lab
+                    headers = ["Recebimento", "Entrega" , "OS", "Item", "Tipo" ,"Especificação", "Código", "Duração"]
+                    table_data = [headers] + lab_data
+                    
+                    col_widths = [23*mm, 27*mm, 23*mm, 30*mm, 65*mm, 35*mm, 23*mm, 20*mm]
+                    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+
+                    table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 8),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 7),
+                    ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F5F7FA')]),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),       # Align top
+                    ('WORDWRAP', (0, 0), (-1, -1), True),       # ← Enable word wrap
+                    ]))
+                    
+                    elements.append(table)
+                    elements.append(PageBreak())
+            
+            # Footer
+            elements.append(Spacer(1, 10*mm))
+            elements.append(Paragraph(f"Total geral: {total_all} serviços em {len(LABS)} laboratórios", styles['Normal']))
+            
+            doc.build(elements)
+            os.startfile(filename)
+            
+            self.hide_loading_screen()
+            
+        except Exception as e:
+            
+            self.hide_loading_screen()
+            messagebox.showerror("Erro", f"Falha ao gerar PDF:\n{str(e)}")
+
+    @staticmethod
+    def _convert_hhmm_to_minutes(time_str):
+        if not time_str:
+            return 0
+        try:
+            parts = str(time_str).strip().split(':')
+            return int(parts[0]) * 60 + int(parts[1])
+        except:
+            return 0
 
     def show_lab_context_menu(self, event, lab_code, lab_config):
         """Right-click context menu for lab button"""
         context_menu = tk.Menu(self.frame, tearoff=0)
         
-        #context_menu.add_command(label=f"📅 Abrir Agenda de {lab_config['name']}",command=lambda lc=lab_code, lcfg=lab_config: self.open_lab(lc, lcfg))
-        
-        #context_menu.add_separator()
-        
         chat_id = lab_config.get('teams_chat_id', '')
         if chat_id:
             context_menu.add_command(label=f"Iniciar chat do Teams com Laboratório de {lab_config['name']}",command=lambda lcfg=lab_config: self.open_teams_chat(lcfg))
+            context_menu.add_command(label=f"Exportar Programa de Serviços para Laboratório de {lab_config['name']} [Em desenvolvimento]",command=lambda lcfg=lab_config: self.export_lab_to_pdf)
         
         planilha_link = lab_config.get('sharepoint_planilha', '')
         #if planilha_link:
@@ -233,9 +525,7 @@ class LabSelector:
         lab_notebook.pack(fill='both', expand=True)
         
         ServiceScheduler(lab_notebook, STR_CONN, self.cor_fundo,id_sector=lab_config['sector_id'],lab_name=lab_config['name'],lab_config=lab_config)
-        
         ServiceSchedulerLinkedDirect(lab_notebook, STR_CONN_LINKED, STR_CONN, self.cor_fundo, lab_code=lab_code, lab_config=lab_config)
-
 
 # ==================== SERVICE SCHEDULER (MULTI-LAB) ====================
 class ServiceScheduler:
@@ -260,10 +550,7 @@ class ServiceScheduler:
         
         self.setup_ui()
         self.load_services()
-
-        self.load_calendar_data()
-        self.render_calendar()
-        self.update_queue_count()
+        self.refresh_calendar()
 
     def on_tab_changed(self, event):
         notebook = event.widget
@@ -303,6 +590,14 @@ class ServiceScheduler:
         
         self.loading_popup.grab_set()
         self.loading_popup.update()
+
+
+    def hide_loading_screen(self):
+        """Hide the loading overlay"""
+        if hasattr(self, 'loading_popup') and self.loading_popup.winfo_exists():
+            self.loading_popup.grab_release()
+            self.loading_popup.destroy()
+
 
     def reschedule_selected_services_manual(self, tree, selected_items):
         """Manually reschedule only selected services"""
@@ -405,9 +700,7 @@ class ServiceScheduler:
             self.show_loading_screen(f"Agendando {count} {'item' if count == 1 else 'itens'} em Laboratório de {self.lab_name}")
             self.schedule_all_pending(from_date=new_datetime)
             
-            self.load_calendar_data()
-            self.render_calendar()
-            self.update_queue_count()
+            self.refresh_calendar()
             self.hide_loading_screen()
             
             new_date_br = new_date.strftime('%d/%m/%Y')
@@ -417,12 +710,6 @@ class ServiceScheduler:
             messagebox.showwarning("Aviso", "Data ou horário inválido!")
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
-
-    def hide_loading_screen(self):
-        """Hide the loading overlay"""
-        if hasattr(self, 'loading_popup') and self.loading_popup.winfo_exists():
-            self.loading_popup.grab_release()
-            self.loading_popup.destroy()
 
     def setup_ui(self):
         main_container = tk.Frame(self.frame_certificados, bg=self.cor_fundo)
@@ -1235,9 +1522,7 @@ class ServiceScheduler:
 
             self.next_start, self.next_end = self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
             
-            self.load_calendar_data()
             self.refresh_calendar()
-            self.update_queue_count()
             
             self.hide_loading_screen()
             
@@ -1364,9 +1649,7 @@ class ServiceScheduler:
 
             self.next_start, self.next_end = self.schedule_all_pending(from_date=new_datetime)
             
-            self.load_calendar_data()
             self.refresh_calendar()
-            self.update_queue_count()
             self.hide_loading_screen()
             
             new_date_br = new_date.strftime('%d/%m/%Y')
@@ -1477,8 +1760,7 @@ class ServiceScheduler:
             conn.Execute(f"DELETE FROM [IST-PGE].dbo.Calendar_Exceptions WHERE id = {exception_id}")
             conn.Close()
             
-            self.load_calendar_data()
-            self.render_calendar()
+            self.refresh_calendar()
             
             if popup and popup.winfo_exists():
                 calendar_key = getattr(popup, 'calendar_key', None)
@@ -1684,9 +1966,8 @@ class ServiceScheduler:
             self.show_loading_screen(f"Agendando {len(selected_indices)} {'itens' if len(selected_indices) > 1 else 'item'} em Laboratório de {self.lab_name}")
             first_start, last_end = self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
             
-            self.load_calendar_data()
+            self.refresh_calendar()
 
-            self.render_calendar()
             popup.destroy()
             self.hide_loading_screen()
             
@@ -1708,7 +1989,7 @@ class ServiceScheduler:
             messagebox.showerror("Erro kkkkkkkkkkk", f"Falha ao remover bloqueios:\n\nalá tentou remover o bloqueio 'Intervalinho' kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
             return
         
-        confirm = messagebox.askyesno("Info agendamento", f"Deseja remover {'o bloqueio' if count == 1 else f'os {count-1} bloqueios'} do dia {date_str}?")
+        confirm = messagebox.askyesno("Info agendamento", f"Deseja remover {'o bloqueio' if count > 1 and count < 3 else f'os {count-1} bloqueios'} do dia {date_str}?")
         if not confirm:
             return
         
@@ -1719,12 +2000,13 @@ class ServiceScheduler:
             conn.Execute(f"DELETE FROM [IST-PGE].dbo.Calendar_Exceptions WHERE exception_date = '{date_str_sql}' AND id_sector = {self.id_sector} AND (notes IS NULL OR notes NOT LIKE '%Intervalinho%')")
             conn.Close()
             
-            self.load_calendar_data()
-            self.render_calendar()
-            self.status_label.config(text=f"Bloqueio(s) removido(s) de {date_str}")
-            messagebox.showinfo("Sucesso", f"Bloqueio(s) removido(s) de {date_str}")
+            self.refresh_calendar()
+
+            self.status_label.config(text=f"{'Bloqueios removidos' if count > 2 and count < 4 else 'bloqueio removido'} de {date_str}")
+
+            messagebox.showinfo("Info agendamento", f"{'Bloqueios removidos' if count > 2 and count < 4 else 'Bloqueio removido'} de {date_str}")
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao remover bloqueios:\n{str(e)}")
+            messagebox.showerror("Info agendamento", f"Falha ao remover bloqueios:\n{str(e)}")
 
     def get_sharepoint_url(self, os_code):
         if not os_code:
@@ -1773,9 +2055,7 @@ class ServiceScheduler:
             conn.Execute(f"DELETE FROM [IST-PGE].dbo.Service_Schedule WHERE id_sector = {self.id_sector}")
             conn.Close()
             
-            self.load_calendar_data()
-            self.render_calendar()
-            self.update_queue_count()
+            self.refresh_calendar()
             self.status_label.config(text=f"Os agendamentos de serviços da agenda de {self.lab_name} foram removidos")
             messagebox.showinfo("Sucesso", f"Todos os agendamentos de serviços foram removidos de Laboratório de {self.lab_name}!")
 
@@ -1899,10 +2179,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         
         columns = ("OS", "Item", "Especificação", "Descrição", "Código", "Duração")
         
-        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",
-                                  yscrollcommand=tree_scroll_y.set,
-                                  xscrollcommand=tree_scroll_x.set,
-                                  selectmode="extended")
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",yscrollcommand=tree_scroll_y.set,xscrollcommand=tree_scroll_x.set,selectmode="extended")
         
         tree_scroll_y.config(command=self.tree.yview)
         tree_scroll_x.config(command=self.tree.xview)
@@ -1939,8 +2216,175 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         self.btn_exception = ttk.Button(button_frame, text=" Adicionar Bloqueio de Agenda ", command=self.add_calendar_exception, cursor='hand2')
         self.btn_exception.pack(side="left", padx=5)
 
-        self.status_label = ttk.Label(self.frame_certificados,text="Selecione os serviços e use o botão direito para agendar",font=("Segoe UI", 12))
-        self.status_label.pack(pady=5)
+        #self.status_label = ttk.Label(self.frame_certificados,text="Selecione os serviços e use o botão direito para agendar",font=("Segoe UI", 12))
+        #self.status_label.pack(pady=5)
+
+        self.btn_export = ttk.Button(button_frame, text="Exportar Relatório de Programação de Serviços ", command=self.export_to_pdf, cursor='hand2')
+        self.btn_export.pack(side="left", padx=5)
+
+    def export_to_pdf(self):
+        """Export treeview data to PDF with logo and lab info"""
+        
+        lab_name = self.lab_config.get('name', '')
+        
+        # Ask save location
+        filename = filedialog.asksaveasfilename(defaultextension=".pdf",filetypes=[("PDF files", "*.pdf")],initialfile=f"Programação de Serviços Laboratório de {lab_name} {datetime.now().strftime('%d-%m-%Y')}.pdf",title=f"Programação de Serviços Laboratório de {lab_name} {datetime.now().strftime('%m-%d-%Y')}")
+        
+        if not filename:
+            return
+        
+        try:
+            doc = SimpleDocTemplate(filename, pagesize=landscape(A4), leftMargin=15*mm, rightMargin=15*mm,topMargin=15*mm, bottomMargin=15*mm)
+            
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            # Custom styles
+            title_style = ParagraphStyle('Title_CS',            parent=styles['Title'],fontSize=14, textColor=HexColor('#1B4B9F'), spaceAfter=5*mm,alignment=TA_CENTER)
+            subtitle_style = ParagraphStyle('Subtitle_CS',      parent=styles['Normal'],fontSize=10, textColor=HexColor('#333333'), spaceAfter=3*mm,alignment=TA_CENTER)
+            header_style = ParagraphStyle('Header_CS',          parent=styles['Normal'],fontSize=8, textColor=HexColor('#666666'), spaceAfter=2*mm,alignment=TA_LEFT)
+            
+            # Logo
+            try:
+                logo_bytes = base64.b64decode(LOGO_BASE64)
+                logo_img = RLImage(BytesIO(logo_bytes), width=40*mm, height=20*mm)
+                elements.append(logo_img)
+            except:
+                pass
+            
+            # Title
+            elements.append(Paragraph(f"Programação de Serviços Metrológicos - Laboratório de {lab_name}", title_style))
+            elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
+            elements.append(Spacer(1, 5*mm))
+            
+            # Build table data
+            headers = ["OS", "Item", "Especificação", "Descrição", "Código", "Duração", "Status"]
+            data = [headers]
+            
+            for item in self.tree.get_children():
+                values = self.tree.item(item)['values']
+                data.append([str(v)[:50] if v else "" for v in values])
+            
+            if len(data) == 1:  # Only headers, no data
+                elements.append(Paragraph("Nenhum serviço encontrado.", styles['Normal']))
+            else:
+                # Create table
+                col_widths = [45*mm, 35*mm, 55*mm, 60*mm, 30*mm, 25*mm, 45*mm]
+                table = Table(data, colWidths=col_widths, repeatRows=1)
+                
+                table.setStyle(TableStyle([
+                    # Header
+                    ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 7),
+                    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                    # Body
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 6),
+                    ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 1), (-1, -1), 'TOP'),
+                    ('TOPPADDING', (0, 1), (-1, -1), 3),
+                    ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+                    ('LEFTPADDING', (0, 1), (-1, -1), 3),
+                    # Grid
+                    ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
+                    # Alternating rows
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F5F7FA')]),
+                ]))
+                
+                elements.append(table)
+                
+                # Footer
+                elements.append(Spacer(1, 10*mm))
+                elements.append(Paragraph(
+                    f"Total de serviços: {len(data) - 1} | IST-PGE - Laboratório de Metrologia",
+                    header_style
+                ))
+            
+            doc.build(elements)
+            
+            # Open the PDF
+            os.startfile(filename)
+            
+            #self.status_label.config(text=f"PDF exportado: {os.path.basename(filename)}")
+            messagebox.showinfo("Sucesso", f"PDF salvo em:\n{filename}")
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao gerar PDF:\n{str(e)}")
+
+    def export_lab_to_pdf(self):
+        """Export current lab's services to PDF - for context menu"""
+        lab_name = self.lab_config.get('name', '')
+        
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf")],
+            initialfile=f"Programação {lab_name} {datetime.now().strftime('%d-%m-%Y')}.pdf",
+            title=f"Programação - Laboratório de {lab_name}"
+        )
+        
+        if not filename:
+            return
+        
+        try:
+            doc = SimpleDocTemplate(filename, pagesize=landscape(A4),
+                                leftMargin=15*mm, rightMargin=15*mm,
+                                topMargin=15*mm, bottomMargin=15*mm)
+            
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            # Logo
+            try:
+                logo_bytes = base64.b64decode(LOGO_BASE64)
+                logo_img = RLImage(BytesIO(logo_bytes), width=40*mm, height=20*mm)
+                elements.append(logo_img)
+            except:
+                pass
+            
+            elements.append(Paragraph(f"Programação de Serviços - Laboratório de {lab_name}", styles['Title']))
+            elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+            elements.append(Spacer(1, 10*mm))
+            
+            headers = ["OS", "Item", "Especificação", "Código", "Duração", "Status"]
+            data = [headers]
+            
+            for item in self.tree.get_children():
+                values = self.tree.item(item)['values']
+                data.append([
+                    str(values[0]) if values[0] else "",   # OS
+                    str(values[1]) if values[1] else "",   # Item
+                    str(values[2])[:50] if values[2] else "",  # Especificação
+                    str(values[4]) if values[4] else "",   # Código
+                    str(values[5]) if values[5] else "",   # Duração
+                    str(values[6]) if len(values) > 6 and values[6] else "",  # Status
+                ])
+            
+            col_widths = [45*mm, 35*mm, 70*mm, 35*mm, 30*mm, 60*mm]
+            table = Table(data, colWidths=col_widths, repeatRows=1)
+            
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 7),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 6),
+                ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F5F7FA')]),
+            ]))
+            
+            elements.append(table)
+            elements.append(Spacer(1, 10*mm))
+            elements.append(Paragraph(f"Total: {len(data) - 1} serviços", styles['Normal']))
+            
+            doc.build(elements)
+            os.startfile(filename)
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao gerar PDF:\n{str(e)}")
 
     def cleanup_pending_services(self):
         """Remove PENDING services that have no schedule (orphaned)"""
@@ -2120,12 +2564,12 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             
             count = len(self.all_rows)
             lab_name = self.lab_config.get('name', '')
-            if count == 0:
-                self.status_label.config(text=f"Nenhum serviço encontrado para {lab_name}")
-            elif count == 1:
-                self.status_label.config(text=f"1 serviço carregado")
-            else:
-                self.status_label.config(text=f"{count} serviços carregados")
+            #if count == 0:
+            #    self.status_label.config(text=f"Nenhum serviço encontrado para {lab_name}")
+            #elif count == 1:
+            #    self.status_label.config(text=f"1 serviço carregado")
+            #else:
+            #    self.status_label.config(text=f"{count} serviços carregados")
             
         except Exception as e:
             self.status_label.config(text=f"Erro: {str(e)}")
@@ -2168,8 +2612,9 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                                 formatted = str(scheduled_start)[:10]
                             status_map[item_code] = datetime.strptime(full_str, '%Y-%m-%d %H:%M').strftime('%d/%m/%Y - %H:%M')
                         else:
-                            full_str = scheduled_start[:16]  # '2026-05-22 08:00'
-                            formatted = datetime.strptime(full_str, '%Y-%m-%d %H:%M').strftime('%d/%m/%Y - %H:%M')
+                            formatted = "None"
+                            #full_str = scheduled_start[:16]  # '2026-05-22 08:00'
+                            #formatted = datetime.strptime(full_str, '%Y-%m-%d %H:%M').strftime('%d/%m/%Y - %H:%M')
 
                     rs.MoveNext()
             
@@ -2368,12 +2813,12 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             
             conn.Close()
             
-            if added_count == 1:
-                self.status_label.config(text=f"{added_count} serviço adicionado à fila!")
-            elif added_count == 0:
-                self.status_label.config(text=f"Nenhum serviço adicionado à fila!")
-            else:
-                self.status_label.config(text=f"{added_count} serviços adicionados à fila!")
+            #if added_count == 1:
+            #    self.status_label.config(text=f"{added_count} serviço adicionado à fila!")
+            #elif added_count == 0:
+            #    self.status_label.config(text=f"Nenhum serviço adicionado à fila!")
+            #else:
+            #    self.status_label.config(text=f"{added_count} serviços adicionados à fila!")
                 
             self.clear_selection()
             self.process_fifo()
@@ -2803,7 +3248,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                 msg = f"Bloqueio de agenda adicionado:\n\nData: {exception_date_br}\nHorário: {start_time} às {end_time}\nRazão: {notes}"
             
             messagebox.showinfo("Info agendamento", msg)
-            self.status_label.config(text=f"Bloqueio de calendário adicionado em: {exception_date_br}")
+            #self.status_label.config(text=f"Bloqueio de calendário adicionado em: {exception_date_br}")
         except ValueError:
             messagebox.showwarning("Aviso", "Data inválida!")
         except Exception as e:
