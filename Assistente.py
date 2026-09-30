@@ -27,7 +27,8 @@ import base64
 from io import BytesIO
 from PIL import Image, ImageTk
 
-LOGO_BASE64 = """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"""
+LOGO_BASE64 = """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"""
+bool_agenda = 1
 
 def get_server_ip(hostname='UO061M4118173'):
     try:
@@ -89,32 +90,32 @@ username0 = username00.split('.')[0]
 username = username0.capitalize()
 
 greetings = [
-    f' Oi olá  ',
-    f' Vai almoçar na Bete hoje? ',
+    f' Oi olá ',
+    f' Vai almoçar na Bete hoje? ',  
     f' E o churras?? ',
-    f' Ora ora  ',
-    f' Buenas, {username}?  ',
-    f' {username}?!  ',
-    f' "Nani??"  ',
-    f' Tudo bom, {username}?  ',
-    f' Hi there, {username}!  ',
-    f' Hello there, {username}!  ',
-    f' Hellooo!  ',
-    f' Fala aí {username}, tudo bom?  ',
-    f' Tudo bão {username}?  ',
-    f' Bão!?  ',
-    f' E aí {username}, bão!?  ',
+    f' Ora ora ',
+    f' Buenas, {username}? ',
+    f' {username}?! ',
+    f' "Nani??" ',
+    f' Tudo bom, {username}? ',
+    f' Hi there, {username}! ',
+    f' Hello there, {username}! ',
+    f' Hellooo! ',
+    f' Fala aí {username}, tudo bom? ',
+    f' Tudo bão {username}? ',
+    f' Bão!? ',
+    f' E aí {username}, bão!? ',
     f' {username}!? ',
     f' Alô alô {username}! ',
-    f' E aí {username}, tudo certo? ',    
-    f' Seu nome é Gabriel? ',    
+    f' E aí {username}, tudo certo? ',
+    f' Seu nome é Gabriel? ',
     f' Opa opa ',    
     f' Aoba ',    
-    f' Tudo certo?  ',
-    f'  ¯|_(ツ)_|¯  ',    
+    f' Tudo certo? ',
+    f'  ¯|_(ツ)_|¯ ',
     f'  *_*  ',
-    f'  Buenas tardes!  ',
-    f'  Vai um chimas?  '
+    f'  Buenas tardes! ', 
+    f'  Vai um chimas? '
 ]
 
 buenas = random.choice(greetings)
@@ -167,7 +168,9 @@ class LabSelector:
         
         self.loading_popup = tk.Toplevel(self.frame)
         self.loading_popup.geometry("550x130")
-        self.loading_popup.configure(bg=self.cor_fundo)
+        
+        cor_fundo2 = _from_rgb((0,0,0))
+        self.loading_popup.configure(bg=cor_fundo2)
         self.loading_popup.title("")
         self.loading_popup.overrideredirect(True)
         self.loading_popup.attributes('-topmost', True)
@@ -178,15 +181,18 @@ class LabSelector:
         y = self.frame.winfo_rooty() + (self.frame.winfo_height() // 2) - 65
         self.loading_popup.geometry(f"+{x}+{y}")
         
-        frame = tk.Frame(self.loading_popup, bg=self.cor_fundo, highlightbackground="#FFFFFF", highlightthickness=2)
+        frame = tk.Frame(self.loading_popup, bg=cor_fundo2, highlightbackground="#FFFFFF", highlightthickness=2)
         frame.pack(fill='both', expand=True, padx=2, pady=2)
 
-        tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+        if bool_agenda == 1:
+            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+        elif bool_agenda == 0:
+            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Dados está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
 
         #tk.Label(frame, text=f"Laboratório de {self.lab_name}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
         
         # Message
-        tk.Label(frame, text=message, font=('Segoe UI', 11),bg=self.cor_fundo, fg='white').pack(pady=(5, 5))
+        tk.Label(frame, text=message, font=('Segoe UI', 11),bg='white', fg='black').pack(pady=(5, 5))
         
         self.loading_popup.grab_set()
         self.loading_popup.update()
@@ -208,7 +214,7 @@ class LabSelector:
             img_data = base64.b64decode(LOGO_BASE64)
             img = Image.open(BytesIO(img_data))
             w = 45
-            h = int(w * 3.74703357)
+            h = int(w * 4.411764)
             img = img.resize((h, w), Image.LANCZOS)
             self.logo_image = ImageTk.PhotoImage(img)
             tk.Label(main, image=self.logo_image, bg=self.cor_fundo).pack(pady=(0, 10))
@@ -527,8 +533,330 @@ class LabSelector:
         ServiceScheduler(lab_notebook, STR_CONN, self.cor_fundo,id_sector=lab_config['sector_id'],lab_name=lab_config['name'],lab_config=lab_config)
         ServiceSchedulerLinkedDirect(lab_notebook, STR_CONN_LINKED, STR_CONN, self.cor_fundo, lab_code=lab_code, lab_config=lab_config)
 
-# ==================== SERVICE SCHEDULER (MULTI-LAB) ====================
-class ServiceScheduler:
+class ProcedureManager:
+    """Gerenciador de Procedimentos - Update procedure_name and procedure_url"""
+    
+    def __init__(self, parent, str_conn, str_conn_primary, cor_fundo, lab_code="", lab_config=None):
+        self.str_conn = str_conn
+        self.str_conn_primary = str_conn_primary
+        self.cor_fundo = 'black'
+        self.lab_code = lab_code
+        self.lab_config = lab_config or {}
+        self.all_rows = []
+        
+        self._open_window(parent)
+    
+    def _sanitize_input(self, text):
+        """Remove dangerous characters to prevent SQL injection"""
+        if not text:
+            return ""
+        # Remove single quotes, semicolons, double dashes
+        dangerous = ["'", ";", "--", "/*", "*/", "xp_", "sp_", "exec", "drop", "delete", "truncate"]
+        sanitized = text
+        for d in dangerous:
+            sanitized = sanitized.replace(d, "")
+        return sanitized.strip()
+    
+    def _open_window(self, parent):
+        lab_name = self.lab_config.get('name', self.lab_code)
+        
+        self.window = tk.Toplevel(parent)
+        self.window.geometry("900x550")
+        self.window.minsize(800, 450)
+        self.window.configure(bg=self.cor_fundo)
+        self.window.title(f"Lista de Tempos, Serviços e ITs - Laboratório de {lab_name}")
+        self.window.transient(parent)
+        
+        # ===== TOP FRAME =====
+        top_frame = tk.Frame(self.window, bg=self.cor_fundo)
+        top_frame.pack(fill='x', padx=15, pady=(15, 5))
+        
+        tk.Label(top_frame, text=f"Lista de Tempos, Serviços e ITs",font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg='white').pack(anchor='w')
+        
+        # ===== SEARCH =====
+        search_frame = tk.Frame(self.window, bg=self.cor_fundo)
+        search_frame.pack(fill='x', padx=15, pady=(10, 5))
+        
+        #tk.Label(search_frame, text="Buscar:", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white').pack(side='left', padx=(0, 5))
+        
+        #self.search_var = tk.StringVar()
+        #self.search_var.trace('w', lambda *args: self._filter_treeview())
+        #ttk.Entry(search_frame, textvariable=self.search_var, width=40).pack(side='left', padx=5)
+        
+        # ===== TREEVIEW =====
+        tree_frame = ttk.Frame(self.window)
+        tree_frame.pack(fill='both', expand=True, padx=15, pady=10)
+        
+        tree_scroll_y = ttk.Scrollbar(tree_frame)
+        tree_scroll_y.pack(side='right', fill='y')
+        
+        tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
+        tree_scroll_x.pack(side='bottom', fill='x')
+        
+        columns = ("Código", "Duração", "Serviço", "Descrição","Instrução de Trabalho", "Link")
+        
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",yscrollcommand=tree_scroll_y.set,xscrollcommand=tree_scroll_x.set,selectmode="browse")
+        
+        tree_scroll_y.config(command=self.tree.yview)
+        tree_scroll_x.config(command=self.tree.xview)
+        
+        self.tree.heading("Código",                 text="Código")
+        self.tree.heading("Duração",                text="Duração")
+        self.tree.heading("Serviço",                text="Serviço")
+        self.tree.heading("Descrição",              text="Descrição")
+        self.tree.heading("Instrução de Trabalho",  text="Instrução de Trabalho")
+        self.tree.heading("Link",                   text="Link")
+        
+        self.tree.column("Código",                  width=70,minwidth=65)
+        self.tree.column("Duração",                 width=50,minwidth=50)
+        self.tree.column("Serviço",                 width=200)
+        self.tree.column("Descrição",               width=100)
+        self.tree.column("Instrução de Trabalho",   width=120,minwidth=120)
+        self.tree.column("Link",                    width=250)
+        
+        self.tree.pack(expand=True, fill='both')
+        self.tree.bind('<<TreeviewSelect>>', self._on_select)
+        self.tree.bind('<Double-1>', lambda e: self._edit_selected())
+        
+        # ===== EDIT FRAME =====
+        edit_frame = tk.LabelFrame(self.window, text=" Editar Dados [Em desenvolvimento] ", font=('Segoe UI', 10, 'bold'),bg=self.cor_fundo, fg="#FFFFFF",padx=10, pady=10)
+        edit_frame.pack(fill='x', padx=15, pady=(5, 10))
+        
+        # Current info
+        self.lbl_current = tk.Label(edit_frame, text="Selecione um serviço na lista acima para editar.",font=('Segoe UI', 9), bg=self.cor_fundo, fg='#B7D5F5', anchor='w', justify='left')
+        self.lbl_current.pack(anchor='w', pady=(0, 5))
+        
+        # Procedure Name
+        name_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
+        name_frame.pack(fill='x', pady=3)
+        
+        tk.Label(name_frame, text="Nome da Instrução de Trabalho:", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
+        
+        self.proc_name_var = tk.StringVar()
+        self.entry_name = ttk.Entry(name_frame, textvariable=self.proc_name_var, width=60)
+        self.entry_name.pack(side='left', padx=5, fill='x', expand=True)
+        
+        # Procedure URL
+        url_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
+        url_frame.pack(fill='x', pady=3)
+        
+        tk.Label(url_frame, text="Link do documento (EmDoc):", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
+        
+        self.proc_url_var = tk.StringVar()
+        self.entry_url = ttk.Entry(url_frame, textvariable=self.proc_url_var, width=55)
+        self.entry_url.pack(side='left', padx=5, fill='x', expand=True)
+        
+        # Buttons
+        btn_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
+        btn_frame.pack(fill='x', pady=(10, 0))
+        
+        self.btn_save = ttk.Button(btn_frame, text="Salvar", command=self._save_procedure, cursor='hand2')
+        self.btn_save.pack(side='left', padx=5)
+        self.btn_save.config(state='disabled')
+        
+        ttk.Button(btn_frame, text="Atualizar Lista", command=self._load_data).pack(side='left', padx=5)
+        
+        
+        #self.btn_clear = ttk.Button(btn_frame, text="Limpar", command=self._clear_fields, cursor='hand2')
+        #self.btn_clear.pack(side='left', padx=5)
+        
+        #ttk.Button(btn_frame, text="Fechar", command=self.window.destroy).pack(side='right', padx=5)
+        
+        # Status
+        self.status_label = tk.Label(edit_frame, text="", font=('Segoe UI', 9),bg=self.cor_fundo, fg='#28A745')
+        self.status_label.pack(anchor='w', pady=(5, 0))
+        
+        # Load data
+        self._load_data()
+        self._clear_fields()
+    
+    def _load_data(self):
+        """Load services with their procedure info"""
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        self.all_rows.clear()
+        sector_id = self.lab_config.get('sector_id', 0)
+        
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            conn.Open(self.str_conn_primary)
+            
+            # Get services that exist in Service_Modes_Local
+            sql = f"""
+
+                SELECT 
+                sml.id, 
+                sml.code, 
+                sml.execution_time_minutes, 
+                sml.specification,
+                sml.description, 
+                sml.procedure_name, 
+                sml.procedure_url      
+
+                FROM [IST-PGE].dbo.Service_Modes_Local sml
+
+                WHERE sml.code LIKE '%631{self.lab_code.lower()}%'
+
+                ORDER BY sml.code ASC
+            """
+            rs.Open(sql, conn)
+            
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    row_data = {
+                        'id': rs.Fields('id').Value,
+                        'code': rs.Fields('code').Value if rs.Fields('code').Value else "",
+                        'execution_time_minutes': f"{rs.Fields('execution_time_minutes').Value} min"  if rs.Fields('execution_time_minutes').Value else "",
+                        'specification': rs.Fields('specification').Value if rs.Fields('specification').Value else "",
+                        'description': rs.Fields('description').Value if rs.Fields('description').Value else "",
+                        'procedure_name': rs.Fields('procedure_name').Value if rs.Fields('procedure_name').Value else "",
+                        'procedure_url': rs.Fields('procedure_url').Value if rs.Fields('procedure_url').Value else "",
+                    }
+                    self.all_rows.append(row_data)
+                    
+                    proc_name = row_data['procedure_name'] if row_data['procedure_name'] else "(vazio)"
+                    proc_url = row_data['procedure_url'] if row_data['procedure_url'] else "(vazio)"
+                    
+                    self.tree.insert("", "end", values=(
+                        row_data['code'],
+                        row_data['execution_time_minutes'],
+                        row_data['specification'],
+                        row_data['description'],
+                        proc_name,
+                        proc_url
+                    ))
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao carregar dados:\n{str(e)}")
+    
+    def _filter_treeview(self):
+        """Filter treeview by search"""
+        search_term = self.search_var.get().lower()
+        
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        for row in self.all_rows:
+            if not search_term or \
+               search_term in str(row['code']).lower() or \
+               search_term in str(row['execution_time_minutes']).lower() or \
+               search_term in str(row['specification']).lower() or \
+               search_term in str(row['description']).lower() or \
+               search_term in str(row['procedure_name']).lower():
+                
+                proc_name = row['procedure_name'] if row['procedure_name'] else "(vazio)"
+                proc_url = row['procedure_url'] if row['procedure_url'] else "(vazio)"
+                
+                self.tree.insert("", "end", values=(
+                    row['code'], 
+                    row['execution_time_minutes'],
+                    row['specification'], 
+                    row['description'], 
+                    proc_name, 
+                    proc_url
+                ))
+    
+    def _on_select(self, event):
+        """Populate fields when a row is selected"""
+        selected = self.tree.selection()
+        if not selected:
+            self._clear_fields()
+            return
+        
+        all_items = self.tree.get_children()
+        idx = all_items.index(selected[0])
+        
+        if idx < len(self.all_rows):
+            row = self.all_rows[idx]
+            
+            #if len(row['specification']) > 60:
+            #    self.lbl_current.config(text=f"Editando: {row['code']} - {row['specification'][:60]}...")
+            #else:
+            #    self.lbl_current.config(text=f"Editando: {row['code']} - {row['specification']}")
+
+            self.proc_name_var.set(row['procedure_name'])
+            self.proc_url_var.set(row['procedure_url'])
+            self.btn_save.config(state='normal')
+            
+            # Store selected row index
+            self._selected_idx = idx
+    
+    def _clear_fields(self):
+        """Clear edit fields"""
+        #self.lbl_current.config(text="Selecione um serviço na lista acima para editar.")
+        self.proc_name_var.set("")
+        self.proc_url_var.set("")
+        self.btn_save.config(state='disabled')
+        self._selected_idx = None
+        self.status_label.config(text="")
+    
+    def _edit_selected(self):
+        """Focus on name field when double-clicking"""
+        if self.btn_save.cget('state') == 'normal':
+            self.entry_name.focus_set()
+    
+    def _save_procedure(self):
+        """Save procedure info to database"""
+        if self._selected_idx is None:
+            return
+        
+        row = self.all_rows[self._selected_idx]
+        service_id = row['id']
+        service_code = row['code']
+        
+        # Sanitize inputs
+        proc_name = self._sanitize_input(self.proc_name_var.get().strip())
+        proc_url = self._sanitize_input(self.proc_url_var.get().strip())
+        
+        # Validate URL format (basic check)
+        if proc_url and not (proc_url.startswith('http://') or proc_url.startswith('https://')):
+            if not messagebox.askyesno("Aviso", 
+                "A URL não começa com http:// ou https://. Deseja salvar mesmo assim?"):
+                return
+        
+        # Confirm
+        confirm = messagebox.askyesno("Confirmar",
+            f"Atualizar procedimento para:\n\n"
+            f"Código: {service_code}\n"
+            f"Nome: {proc_name if proc_name else '(vazio)'}\n"
+            f"URL: {proc_url if proc_url else '(vazio)'}\n\n"
+            f"Continuar?")
+        
+        if not confirm:
+            return
+        
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            conn.Open(self.str_conn_primary)
+            
+            sql = f"""
+                UPDATE [IST-PGE].dbo.Service_Modes_Local
+                SET procedure_name = {'NULL' if not proc_name else f"'{proc_name.replace(chr(39), chr(39)+chr(39))}'"},
+                    procedure_url = {'NULL' if not proc_url else f"'{proc_url.replace(chr(39), chr(39)+chr(39))}'"}
+                WHERE id = {service_id}
+            """
+            conn.Execute(sql)
+            conn.Close()
+            
+            self.status_label.config(text=f"Instrução de trabalho de {service_code} atualizado com sucesso!")
+            
+            # Refresh data
+            self._load_data()
+            self._clear_fields()
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao salvar:\n{str(e)}")
+            self.status_label.config(text="Erro ao salvar!")
+
+
+class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
     """ ABA: Agendamento de Serviços (Calibração FIFO) - Multi-Laboratório """
     
     def __init__(self, parent_notebook, str_conn, cor_fundo, id_sector=None, lab_name="", lab_config=None):
@@ -538,7 +866,7 @@ class ServiceScheduler:
         self.lab_name = lab_name
         self.lab_config = lab_config or {}
         
-        tab_name = f"{self.lab_name}"
+        tab_name = f" Calendário de {self.lab_name} "
         self.frame_certificados = ttk.Frame(parent_notebook)
         parent_notebook.add(self.frame_certificados, text=tab_name)
         
@@ -551,6 +879,17 @@ class ServiceScheduler:
         self.setup_ui()
         self.load_services()
         self.refresh_calendar()
+
+    def open_procedure_manager(self):
+        """Open the procedure management window"""
+        ProcedureManager(
+            self.frame_certificados,
+            self.str_conn,
+            self.str_conn_primary,
+            self.cor_fundo,
+            lab_code=self.lab_code,
+            lab_config=self.lab_config
+        )
 
     def on_tab_changed(self, event):
         notebook = event.widget
@@ -567,7 +906,8 @@ class ServiceScheduler:
         
         self.loading_popup = tk.Toplevel(self.frame_certificados)
         self.loading_popup.geometry("550x130")
-        self.loading_popup.configure(bg=self.cor_fundo)
+        cor_fundo2 = _from_rgb((0,0,0))
+        self.loading_popup.configure(bg=cor_fundo2)
         self.loading_popup.title("")
         self.loading_popup.overrideredirect(True)
         self.loading_popup.attributes('-topmost', True)
@@ -578,15 +918,20 @@ class ServiceScheduler:
         y = self.frame_certificados.winfo_rooty() + (self.frame_certificados.winfo_height() // 2) - 65
         self.loading_popup.geometry(f"+{x}+{y}")
         
-        frame = tk.Frame(self.loading_popup, bg=self.cor_fundo, highlightbackground="#FFFFFF", highlightthickness=2)
+        frame = tk.Frame(self.loading_popup, bg=cor_fundo2, highlightbackground="#FFFFFF", highlightthickness=2)
         frame.pack(fill='both', expand=True, padx=2, pady=2)
 
-        tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+        
+        if bool_agenda == 1:
+            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+        elif bool_agenda == 0:
+            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Dados está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+
 
         #tk.Label(frame, text=f"Laboratório de {self.lab_name}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
         
         # Message
-        tk.Label(frame, text=message, font=('Segoe UI', 11),bg=self.cor_fundo, fg='white').pack(pady=(5, 5))
+        tk.Label(frame, text=message, font=('Segoe UI', 11),bg='white', fg='black').pack(pady=(5, 5))
         
         self.loading_popup.grab_set()
         self.loading_popup.update()
@@ -697,7 +1042,7 @@ class ServiceScheduler:
             conn.Execute(f"DELETE FROM [IST-PGE].dbo.Time_Slots WHERE schedule_id IN ({id_list})")
             conn.Close()
             
-            self.show_loading_screen(f"Agendando {count} {'item' if count == 1 else 'itens'} em Laboratório de {self.lab_name}")
+            self.show_loading_screen(f"Agendamento de {count} {'item' if count == 1 else 'itens'} em Laboratório de {self.lab_name}")
             self.schedule_all_pending(from_date=new_datetime)
             
             self.refresh_calendar()
@@ -901,10 +1246,20 @@ class ServiceScheduler:
             
             sql = f"""
                 SELECT 
-                    ts.slot_date, ts.start_time, ts.end_time,
-                    s.code, s.specification, s.description,
-                    s.execution_time_minutes, ss.notes, ss.status,
-                    ss.priority, ss.id as schedule_id
+                    ts.slot_date, 
+                    ts.start_time, 
+                    ts.end_time,
+                    s.code, 
+                    s.specification, 
+                    s.description,
+                    s.execution_time_minutes,
+                    s.procedure_name,
+                    s.procedure_url,
+                    ss.notes, 
+                    ss.status,
+                    ss.priority, 
+                    ss.id as schedule_id
+
                 FROM [IST-PGE].dbo.Time_Slots ts
                 JOIN [IST-PGE].dbo.Service_Schedule ss ON ts.schedule_id = ss.id
                 JOIN [IST-PGE].dbo.Service_Modes_Local s ON ts.service_id = s.id
@@ -926,6 +1281,9 @@ class ServiceScheduler:
                     
                     calendar_key = (slot_date.day, slot_date.month, slot_date.year)
                     
+                    
+                    procedure_name = rs.Fields('procedure_name').Value if len(str(rs.Fields('procedure_name').Value)) != None else '(vazio)'
+
                     order_data = {
                         'start_time': rs.Fields('start_time').Value,
                         'end_time': rs.Fields('end_time').Value,
@@ -933,6 +1291,8 @@ class ServiceScheduler:
                         'specification': rs.Fields('specification').Value,
                         'description': rs.Fields('description').Value,
                         'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
+                        'procedure_name': procedure_name,
+                        'procedure_url': rs.Fields('procedure_url').Value,
                         'notes': rs.Fields('notes').Value,
                         'status': rs.Fields('status').Value,
                         'priority': rs.Fields('priority').Value,
@@ -958,8 +1318,7 @@ class ServiceScheduler:
         target_date = target_date.replace(day=1)
         year, month = target_date.year, target_date.month
         
-        meses_pt = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        meses_pt = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho','Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         
         # Preload exceptions
         exceptions_by_date = {}
@@ -1024,6 +1383,13 @@ class ServiceScheduler:
         nav_row = tk.Frame(nav_frame, bg=self.cor_fundo)
         nav_row.pack(fill='x')
 
+        nav_row2 = tk.Frame(nav_frame, bg=self.cor_fundo)
+        nav_row2.pack(fill='x')
+        
+        lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
+        #lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços - Laboratório de {self.lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
+        lab_label.pack(side='left', padx=5)
+
         btn_prev = tk.Label(nav_row, text="◀", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
         btn_prev.pack(side='left', padx=5)
         btn_prev.bind('<Button-1>', lambda e: self.change_month(-1))
@@ -1035,12 +1401,7 @@ class ServiceScheduler:
         btn_next.pack(side='left', padx=5)
         btn_next.bind('<Button-1>', lambda e: self.change_month(1))
 
-        nav_row2 = tk.Frame(nav_frame, bg=self.cor_fundo)
-        nav_row2.pack(fill='x')
 
-        lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
-        #lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços - Laboratório de {self.lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
-        lab_label.pack(side='left', padx=5)
 
         header_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
         header_frame.pack(fill='x')
@@ -1148,8 +1509,9 @@ class ServiceScheduler:
         btn_refresh = ttk.Button(grid_frame, text="Atualizar", command=self.refresh_calendar, cursor='hand2')
         btn_refresh.pack(side="left", padx=5)
         
-        self.buscar = ttk.Button(grid_frame, text=" Limpar agenda ", command=self.clear_all_scheduled, cursor='hand2')
-        self.buscar.pack(side="left", padx=5)
+        if bool_agenda == 1:
+            self.buscar = ttk.Button(grid_frame, text=" Limpar agenda ", command=self.clear_all_scheduled, cursor='hand2')
+            self.buscar.pack(side="left", padx=5)
 
     def show_day_context_menu(self, event, calendar_key):
         context_menu = tk.Menu(self.calendar_frame, tearoff=0)
@@ -1518,7 +1880,7 @@ class ServiceScheduler:
             """)
             conn.Close()
             
-            self.show_loading_screen(f"Reagendando {len(schedule_ids)} {'itens' if len(schedule_ids) > 1 else 'item'} em Laboratório de {self.lab_name}")
+            self.show_loading_screen(f"Agendamento de {len(schedule_ids)} {'itens' if len(schedule_ids) > 1 else 'item'} em Laboratório de {self.lab_name}")
 
             self.next_start, self.next_end = self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
             
@@ -1703,9 +2065,13 @@ class ServiceScheduler:
                 tag = 'urgente' if is_urgent else 'normal'
                 
                 tree.insert("", "end", values=(
-                    f"{start_str} - {end_str}", os_code, code,
-                    order['specification'], order['description'],
-                    f"{order['execution_time_minutes']} min", order['code']
+                    f"{start_str} - {end_str}", 
+                    os_code, 
+                    code,
+                    order['specification'], 
+                    order['description'],
+                    f"{order['execution_time_minutes']} min", 
+                    order['code']
                 ), tags=(tag,))
         else:
             tree = None
@@ -1806,7 +2172,17 @@ class ServiceScheduler:
                 code = self.extract_code_from_notes(order.get('notes', ''))
                 os_code = self.extract_os_from_notes(order.get('notes', ''))
                 tag = 'urgente' if order.get('priority', 10) <= 5 else 'normal'
-                tree.insert("", "end", values=(f"{start_str} - {end_str}", os_code, code, order['specification'], order['description'], f"{order['execution_time_minutes']} min", order['code']), tags=(tag,))
+
+                tree.insert("", 
+                            "end", 
+                            values=(f"{start_str} - {end_str}", 
+                                    os_code, 
+                                    code, 
+                                    order['specification'], 
+                                    order['description'], 
+                                    f"{order['execution_time_minutes']} min", 
+                                    order['code']), 
+                                    tags=(tag,))
         
         exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
         exceptions_raw = self.load_exceptions_for_date_raw(exc_date)
@@ -2023,18 +2399,35 @@ class ServiceScheduler:
             rs = win32com.client.Dispatch("ADODB.Recordset")
             conn.Open(self.str_conn)
             
-            rs.Open("SELECT id, code, specification, execution_time_minutes, description FROM [IST-PGE].dbo.Service_Modes_Local ORDER BY code ASC", conn)
+            rs.Open("""SELECT 
+                    id, 
+                    code, 
+                    specification, 
+                    execution_time_minutes, 
+                    description,
+                    procedure_name,
+                    procedure_url 
+
+                    FROM [IST-PGE].dbo.Service_Modes_Local 
+
+                    ORDER BY code ASC""", conn)
             
             self.services_data = []
             if not rs.EOF:
                 rs.MoveFirst()
                 while not rs.EOF:
+                    
+                    procedure_name = rs.Fields('procedure_name').Value if len(str(rs.Fields('procedure_name').Value)) != None else '(vazio)'
+
                     self.services_data.append({
                         'id': rs.Fields('id').Value,
                         'code': rs.Fields('code').Value,
                         'specification': rs.Fields('specification').Value,
                         'description': rs.Fields('description').Value,
-                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value
+                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
+                        'procedure_name': procedure_name,
+                        'procedure_url': rs.Fields('procedure_url').Value
+
                     })
                     rs.MoveNext()
             rs.Close()
@@ -2120,6 +2513,17 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             self.status_label.config(text=f"Servidor vinculado indisponível: {str(e)[:80]}")
         self.cleanup_pending_services()
         
+    def open_procedure_manager(self):
+        """Open the procedure management window"""
+        ProcedureManager(
+            self.frame_certificados,
+            self.str_conn,
+            self.str_conn_primary,
+            self.cor_fundo,
+            lab_code=self.lab_code,
+            lab_config=self.lab_config
+        )
+
     def on_tab_changed(self, event):
         notebook = event.widget
         current_tab = notebook.select()
@@ -2150,7 +2554,8 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         self.greetings = ttk.Label(top_frame, text=f"{buenas}", font=("Segoe UI", 10), background='black')
         self.greetings.pack(side='left', padx=5)
         
-        tk.Label(top_frame, text=f"Laboratório de {lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white').pack(side='left', padx=20)
+        #tk.Label(top_frame, text=f"meme Serviços em Laboratório de {lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white').pack(side='left', padx=20)
+        tk.Label(top_frame, text=f"Lista de Serviços",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white').pack(side='left', padx=20)
         
         self.lbl_count = tk.Label(top_frame, text="0 selecionados", font=('Segoe UI', 9, 'bold'),bg=self.cor_fundo, fg='#FFD700')
         self.lbl_count.pack(side='right', padx=20)
@@ -2177,18 +2582,29 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
         tree_scroll_x.pack(side='bottom', fill='x')
         
-        columns = ("OS", "Item", "Especificação", "Descrição", "Código", "Duração")
+        #columns = ("OS", "Item", "Especificação", "Descrição", "Código", "Duração")
+        columns = ("Entrega","OS", "Item", "Tipo","Especificação", "Código", "Duração","Instrução de Trabalho")
         
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",yscrollcommand=tree_scroll_y.set,xscrollcommand=tree_scroll_x.set,selectmode="extended")
         
         tree_scroll_y.config(command=self.tree.yview)
         tree_scroll_x.config(command=self.tree.xview)
         
-        column_widths = {"OS": 80, "Item": 120, "Especificação": 200, "Descrição": 250, "Código": 100, "Duração": 70, "Status de Agendamento": 110}
+        column_widths = {"Entrega":                 40, 
+                        "OS":                       80, 
+                        "Item":                     120, 
+                        "Tipo":                     200, 
+                        "Especificação":            200, 
+                        "Descrição":                250, 
+                        "Código":                   50, 
+                        "Duração":                  70, 
+                        "Status de Agendamento":    110,
+                        "Instrução de Trabalho":    70
+                        }
         
         for col in columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=column_widths.get(col, 80), minwidth=50)
+            self.tree.column(col, width=column_widths.get(col, 80), minwidth=10)
         
         self.tree.pack(expand=True, fill='both')
         
@@ -2203,9 +2619,10 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         self.btn_select_all = ttk.Button(button_frame, text=" Selecionar Todos ", command=self.select_all, cursor='hand2')
         self.btn_select_all.pack(side="left", padx=5)
 
-        self.btn_schedule = ttk.Button(button_frame, text=" Agendar Selecionados ", command=self.schedule_selected, cursor='hand2')
-        self.btn_schedule.pack(side="left", padx=5)
-        self.btn_schedule.config(state="disabled")
+        if bool_agenda == 1:
+            self.btn_schedule = ttk.Button(button_frame, text=" Agendar Selecionados ", command=self.schedule_selected, cursor='hand2')
+            self.btn_schedule.pack(side="left", padx=5)
+            self.btn_schedule.config(state="disabled")
 
         btn_refresh = ttk.Button(button_frame, text=" Atualizar Lista ", command=self.load_services, cursor='hand2')
         btn_refresh.pack(side="left", padx=5)
@@ -2213,178 +2630,19 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         self.btn_clear = ttk.Button(button_frame, text=" Limpar Seleção ", command=self.clear_selection, cursor='hand2')
         self.btn_clear.pack(side="left", padx=5)
         
-        self.btn_exception = ttk.Button(button_frame, text=" Adicionar Bloqueio de Agenda ", command=self.add_calendar_exception, cursor='hand2')
-        self.btn_exception.pack(side="left", padx=5)
+        if bool_agenda == 1:
+            self.btn_exception = ttk.Button(button_frame, text=" Adicionar Bloqueio de Agenda ", command=self.add_calendar_exception, cursor='hand2')
+            self.btn_exception.pack(side="left", padx=5)
+            
+            
+        self.btn_procedures = ttk.Button(button_frame, text=" Lista de Tempos, Serviços e ITs ", command=self.open_procedure_manager, cursor='hand2')
+        self.btn_procedures.pack(side="left", padx=5)
 
         #self.status_label = ttk.Label(self.frame_certificados,text="Selecione os serviços e use o botão direito para agendar",font=("Segoe UI", 12))
         #self.status_label.pack(pady=5)
 
-        self.btn_export = ttk.Button(button_frame, text="Exportar Relatório de Programação de Serviços ", command=self.export_to_pdf, cursor='hand2')
-        self.btn_export.pack(side="left", padx=5)
-
-    def export_to_pdf(self):
-        """Export treeview data to PDF with logo and lab info"""
-        
-        lab_name = self.lab_config.get('name', '')
-        
-        # Ask save location
-        filename = filedialog.asksaveasfilename(defaultextension=".pdf",filetypes=[("PDF files", "*.pdf")],initialfile=f"Programação de Serviços Laboratório de {lab_name} {datetime.now().strftime('%d-%m-%Y')}.pdf",title=f"Programação de Serviços Laboratório de {lab_name} {datetime.now().strftime('%m-%d-%Y')}")
-        
-        if not filename:
-            return
-        
-        try:
-            doc = SimpleDocTemplate(filename, pagesize=landscape(A4), leftMargin=15*mm, rightMargin=15*mm,topMargin=15*mm, bottomMargin=15*mm)
-            
-            elements = []
-            styles = getSampleStyleSheet()
-            
-            # Custom styles
-            title_style = ParagraphStyle('Title_CS',            parent=styles['Title'],fontSize=14, textColor=HexColor('#1B4B9F'), spaceAfter=5*mm,alignment=TA_CENTER)
-            subtitle_style = ParagraphStyle('Subtitle_CS',      parent=styles['Normal'],fontSize=10, textColor=HexColor('#333333'), spaceAfter=3*mm,alignment=TA_CENTER)
-            header_style = ParagraphStyle('Header_CS',          parent=styles['Normal'],fontSize=8, textColor=HexColor('#666666'), spaceAfter=2*mm,alignment=TA_LEFT)
-            
-            # Logo
-            try:
-                logo_bytes = base64.b64decode(LOGO_BASE64)
-                logo_img = RLImage(BytesIO(logo_bytes), width=40*mm, height=20*mm)
-                elements.append(logo_img)
-            except:
-                pass
-            
-            # Title
-            elements.append(Paragraph(f"Programação de Serviços Metrológicos - Laboratório de {lab_name}", title_style))
-            elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
-            elements.append(Spacer(1, 5*mm))
-            
-            # Build table data
-            headers = ["OS", "Item", "Especificação", "Descrição", "Código", "Duração", "Status"]
-            data = [headers]
-            
-            for item in self.tree.get_children():
-                values = self.tree.item(item)['values']
-                data.append([str(v)[:50] if v else "" for v in values])
-            
-            if len(data) == 1:  # Only headers, no data
-                elements.append(Paragraph("Nenhum serviço encontrado.", styles['Normal']))
-            else:
-                # Create table
-                col_widths = [45*mm, 35*mm, 55*mm, 60*mm, 30*mm, 25*mm, 45*mm]
-                table = Table(data, colWidths=col_widths, repeatRows=1)
-                
-                table.setStyle(TableStyle([
-                    # Header
-                    ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, 0), 7),
-                    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-                    # Body
-                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                    ('FONTSIZE', (0, 1), (-1, -1), 6),
-                    ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
-                    ('VALIGN', (0, 1), (-1, -1), 'TOP'),
-                    ('TOPPADDING', (0, 1), (-1, -1), 3),
-                    ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
-                    ('LEFTPADDING', (0, 1), (-1, -1), 3),
-                    # Grid
-                    ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
-                    # Alternating rows
-                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F5F7FA')]),
-                ]))
-                
-                elements.append(table)
-                
-                # Footer
-                elements.append(Spacer(1, 10*mm))
-                elements.append(Paragraph(
-                    f"Total de serviços: {len(data) - 1} | IST-PGE - Laboratório de Metrologia",
-                    header_style
-                ))
-            
-            doc.build(elements)
-            
-            # Open the PDF
-            os.startfile(filename)
-            
-            #self.status_label.config(text=f"PDF exportado: {os.path.basename(filename)}")
-            messagebox.showinfo("Sucesso", f"PDF salvo em:\n{filename}")
-            
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao gerar PDF:\n{str(e)}")
-
-    def export_lab_to_pdf(self):
-        """Export current lab's services to PDF - for context menu"""
-        lab_name = self.lab_config.get('name', '')
-        
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf")],
-            initialfile=f"Programação {lab_name} {datetime.now().strftime('%d-%m-%Y')}.pdf",
-            title=f"Programação - Laboratório de {lab_name}"
-        )
-        
-        if not filename:
-            return
-        
-        try:
-            doc = SimpleDocTemplate(filename, pagesize=landscape(A4),
-                                leftMargin=15*mm, rightMargin=15*mm,
-                                topMargin=15*mm, bottomMargin=15*mm)
-            
-            elements = []
-            styles = getSampleStyleSheet()
-            
-            # Logo
-            try:
-                logo_bytes = base64.b64decode(LOGO_BASE64)
-                logo_img = RLImage(BytesIO(logo_bytes), width=40*mm, height=20*mm)
-                elements.append(logo_img)
-            except:
-                pass
-            
-            elements.append(Paragraph(f"Programação de Serviços - Laboratório de {lab_name}", styles['Title']))
-            elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
-            elements.append(Spacer(1, 10*mm))
-            
-            headers = ["OS", "Item", "Especificação", "Código", "Duração", "Status"]
-            data = [headers]
-            
-            for item in self.tree.get_children():
-                values = self.tree.item(item)['values']
-                data.append([
-                    str(values[0]) if values[0] else "",   # OS
-                    str(values[1]) if values[1] else "",   # Item
-                    str(values[2])[:50] if values[2] else "",  # Especificação
-                    str(values[4]) if values[4] else "",   # Código
-                    str(values[5]) if values[5] else "",   # Duração
-                    str(values[6]) if len(values) > 6 and values[6] else "",  # Status
-                ])
-            
-            col_widths = [45*mm, 35*mm, 70*mm, 35*mm, 30*mm, 60*mm]
-            table = Table(data, colWidths=col_widths, repeatRows=1)
-            
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 7),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 6),
-                ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F5F7FA')]),
-            ]))
-            
-            elements.append(table)
-            elements.append(Spacer(1, 10*mm))
-            elements.append(Paragraph(f"Total: {len(data) - 1} serviços", styles['Normal']))
-            
-            doc.build(elements)
-            os.startfile(filename)
-            
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao gerar PDF:\n{str(e)}")
+        #self.btn_export = ttk.Button(button_frame, text="Exportar Relatório de Programação de Serviços ", command=self.export_to_pdf, cursor='hand2')
+        #self.btn_export.pack(side="left", padx=5)
 
     def cleanup_pending_services(self):
         """Remove PENDING services that have no schedule (orphaned)"""
@@ -2446,7 +2704,9 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         """Show a loading overlay with dynamic info"""
         self.loading_popup = tk.Toplevel(self.frame_certificados)
         self.loading_popup.geometry("550x130")
-        self.loading_popup.configure(bg=self.cor_fundo)
+        
+        cor_fundo2 = _from_rgb((0,0,0))
+        self.loading_popup.configure(bg=cor_fundo2)
         self.loading_popup.title("")
         self.loading_popup.overrideredirect(True)
         self.loading_popup.attributes('-topmost', True)
@@ -2457,15 +2717,18 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         y = self.frame_certificados.winfo_rooty() + (self.frame_certificados.winfo_height() // 2) - 65
         self.loading_popup.geometry(f"+{x}+{y}")
         
-        frame = tk.Frame(self.loading_popup, bg=self.cor_fundo, highlightbackground="#FFFFFF", highlightthickness=2)
+        frame = tk.Frame(self.loading_popup, bg=cor_fundo2, highlightbackground="#FFFFFF", highlightthickness=2)
         frame.pack(fill='both', expand=True, padx=2, pady=2)
 
-        tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
+        if bool_agenda == 1:
+            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg='white').pack(pady=(15, 5))
+        elif bool_agenda == 0:
+            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Dados está carregando:", font=('Segoe UI', 10), background='black', fg='white').pack(pady=(15, 5))
 
         #tk.Label(frame, text=f"Laboratório de {self.lab_}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
         
         # Message
-        tk.Label(frame, text=message, font=('Segoe UI', 11),bg=self.cor_fundo, fg='white').pack(pady=(5, 5))
+        tk.Label(frame, text=message, font=('Segoe UI', 11),bg='white', fg='black').pack(pady=(5, 5))
         
         self.loading_popup.grab_set()
         self.loading_popup.update()
@@ -2494,23 +2757,19 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
 
             sql = f"""
                 SELECT 
-                    os.code AS 'OS',
-                    i.code AS 'Item',
-                    sm.specification AS 'Especificação',
-                    sm.description AS 'Descrição',
-                    sm.code AS 'Code',
-                    sm.execution_time AS 'execution_time',
-                    sm.id AS 'service_mode_id'
+                    CONVERT(VARCHAR(10),os.date_finished, 103) as 'Entrega',
+                    os.code AS 'OS', i.code AS 'Item',
+                    it.name as 'Tipo', sm.specification AS 'Especificação',
+                    sm.description AS 'Descrição', sm.code AS 'Code',
+                    sm.execution_time AS 'execution_time', sm.id AS 'service_mode_id'
                 FROM instruments_services iss
                 LEFT JOIN orders_services AS os ON os.id = iss.id_service_order 
                 LEFT JOIN service_modes AS sm ON sm.id = iss.id_service
                 LEFT JOIN instruments AS i ON i.id = iss.id_instrument AND i.id_service_order = os.id
                 LEFT JOIN budgets AS b ON b.id_order_service = os.id
-                WHERE os.removed = 0
-                AND iss.removed = 0
-                AND sm.removed = 0
-                AND i.removed = 0
-                AND b.is_last_revision = 1
+                LEFT JOIN instrument_types as it on it.id = i.id_instrument_type
+                WHERE os.removed = 0 AND iss.removed = 0 AND sm.removed = 0
+                AND i.removed = 0 AND b.is_last_revision = 1
                 AND (i.id_current_sector = {sector_id} or i.id_current_sector = 1)
                 AND sm.code LIKE '%631{lab_code.lower()}%'
                 ORDER BY os.receiving_date ASC
@@ -2530,8 +2789,10 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                     os_code_num = f"{os_parts[0].lstrip('0')}/{os_year}"
 
                     row_data = {
+                        'Entrega': rs.Fields('Entrega').Value if rs.Fields('Entrega').Value else "",
                         'OS': os_code_num,
                         'Item': rs.Fields('Item').Value if rs.Fields('Item').Value else "",
+                        'Tipo': rs.Fields('Tipo').Value if rs.Fields('Tipo').Value else "",
                         'Especificação': rs.Fields('Especificação').Value if rs.Fields('Especificação').Value else "",
                         'Descrição': rs.Fields('Descrição').Value if rs.Fields('Descrição').Value else "",
                         'Code': rs.Fields('Code').Value if rs.Fields('Code').Value else "",
@@ -2548,28 +2809,34 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             # 2. Query local IST-PGE for scheduled status
             scheduled_map = self._get_scheduled_status(sector_id)
             
-            # 3. Update treeview columns to include Status
+            # 3. Query local IST-PGE for procedure info
+            procedure_map = self._get_procedure_map()
+            
+            # 4. Update treeview columns
             self._update_treeview_columns()
             
-            # 4. Insert rows with status
+            # 5. Insert rows with status and procedure
             for row_data in self.all_rows:
                 item_code = row_data['Item']
+                service_code = row_data['Code']
                 status = scheduled_map.get(item_code, "Pendente")
                 
+                proc = procedure_map.get(service_code, {})
+                proc_display = proc.get('name', '')[:30] if proc.get('name') else ""
+                
                 self.tree.insert("", "end", values=(
-                    row_data['OS'], row_data['Item'], row_data['Especificação'],
-                    row_data['Descrição'], row_data['Code'], f"{row_data['duration_minutes']} min",
-                    status
+                    row_data['Entrega'],
+                    row_data['OS'], 
+                    row_data['Item'], 
+                    row_data['Tipo'],
+                    row_data['Especificação'],
+                    row_data['Code'], 
+                    f"{row_data['duration_minutes']} min",
+                    status,
+                    proc_display
                 ))
             
             count = len(self.all_rows)
-            lab_name = self.lab_config.get('name', '')
-            #if count == 0:
-            #    self.status_label.config(text=f"Nenhum serviço encontrado para {lab_name}")
-            #elif count == 1:
-            #    self.status_label.config(text=f"1 serviço carregado")
-            #else:
-            #    self.status_label.config(text=f"{count} serviços carregados")
             
         except Exception as e:
             self.status_label.config(text=f"Erro: {str(e)}")
@@ -2583,10 +2850,18 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             conn.Open(self.str_conn_primary)
             
             sql = f"""
-                SELECT ss.notes, ss.status, ss.scheduled_start, ss.scheduled_end
+
+                SELECT 
+                ss.notes, 
+                ss.status, 
+                ss.scheduled_start, 
+                ss.scheduled_end
+
                 FROM [IST-PGE].dbo.Service_Schedule ss
+
                 WHERE ss.id_sector = {sector_id}
                 AND ss.status IN ('SCHEDULED', 'PENDING')
+
             """
             rs.Open(sql, conn)
             
@@ -2626,27 +2901,101 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         
         return status_map
 
+    def _get_procedure_map(self):
+        """Get mapping of service_code → procedure info from IST-PGE"""
+        procedure_map = {}
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            conn.Open(self.str_conn_primary)
+            
+            rs.Open("""
+                    
+                SELECT 
+                code, 
+                procedure_name, 
+                procedure_url 
+                    
+                FROM [IST-PGE].dbo.Service_Modes_Local
+                    
+            """, conn)
 
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    code = rs.Fields('code').Value
+                    name = rs.Fields('procedure_name').Value
+                    url = rs.Fields('procedure_url').Value
+                    
+                    # Show "(vazio)" if name is None or empty
+                    if not name or str(name).strip() == "":
+                        display_name = "[Vazio]"
+                    else:
+                        display_name = str(name)
+                    
+
+                    procedure_map[code] = {
+                        'name': display_name,
+                        'url': str(url) if url else ""
+                    }
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+        except Exception as e:
+            print(f"Error getting procedure map: {e}")
+        
+        return procedure_map
+    
+    def open_procedure_url(self):
+        """Open the procedure document for the selected service"""
+        selected = self.tree.selection()
+        if not selected:
+            return
+        
+        all_items = self.tree.get_children()
+        idx = all_items.index(selected[0])
+        
+        if idx < len(self.all_rows):
+            service_code = self.all_rows[idx]['Code']
+            procedure_map = self._get_procedure_map()
+            proc = procedure_map.get(service_code, {})
+            url = proc.get('url', '')
+            
+            if url:
+                webbrowser.open(url)
+            else:
+                service_name = self.all_rows[idx].get('Especificação', service_code)
+                messagebox.showinfo("Aviso", f"Nenhum procedimento cadastrado para:\n{service_code} - {service_name}")
+                
     def _update_treeview_columns(self):
         """Update treeview to include Status column"""
         # Reconfigure columns
-        self.tree["columns"] = ("OS", "Item", "Especificação", "Descrição", "Código", "Duração", "Status de Agendamento")
+        #self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Descrição", "Código", "Duração", "Status de Agendamento")
+        self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Código", "Duração", "Status de Agendamento", "Instrução de Trabalho")
         
+        self.tree.heading("Entrega", text="Entrega")
         self.tree.heading("OS", text="OS")
         self.tree.heading("Item", text="Item")
+        self.tree.heading("Tipo", text="Tipo")
         self.tree.heading("Especificação", text="Especificação")
-        self.tree.heading("Descrição", text="Descrição")
+        #self.tree.heading("Descrição", text="Descrição")
         self.tree.heading("Código", text="Código")
         self.tree.heading("Duração", text="Duração")
         self.tree.heading("Status de Agendamento", text="Status de Agendamento")
+        self.tree.heading("Instrução de Trabalho", text="Instrução de Trabalho")
         
-        self.tree.column("OS", width=70)
+        self.tree.column("Entrega", width=20)
+        self.tree.column("OS", width=20)
         self.tree.column("Item", width=70)
+        self.tree.column("Tipo", width=70)
         self.tree.column("Especificação", width=160)
-        self.tree.column("Descrição", width=200)
-        self.tree.column("Código", width=80)
+        #self.tree.column("Descrição", width=200)
+        self.tree.column("Código", width=30)
         self.tree.column("Duração", width=20)
         self.tree.column("Status de Agendamento", width=110)
+        self.tree.column("Instrução de Trabalho", width=70)
         
         ## Color tags for status
         #self.tree.tag_configure('Disponível', background="#E0EC30")  # Green
@@ -2700,7 +3049,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         else:
             self.btn_schedule.config(state='disabled')
             self.btn_clear.config(state='disabled')
-    
+ 
     def show_context_menu(self, event):
         selected = self.tree.selection()
         if not selected:
@@ -2708,23 +3057,24 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         
         context_menu = tk.Menu(self.tree, tearoff=0)
         count = len(selected)
-        
         lab_name = self.lab_config.get('name', '')
 
-        if count == 1:
-            context_menu.add_command(label=f"Agendar serviço automaticamente", command=self.schedule_selected)
-        elif count > 1:
-            context_menu.add_command(label=f"Agendar serviços automaticamente", command=self.schedule_selected)
-            
-        context_menu.add_separator()
-        context_menu.add_command(label=f"Iniciar chat do Teams com Laboratório de {lab_name}", command=self.open_teams_chat)
+        if bool_agenda == 1:
+            if count == 1:  
+                context_menu.add_command(label=f"Agendar serviço automaticamente", command=self.schedule_selected)
+            elif count > 1:
+                context_menu.add_command(label=f"Agendar serviços automaticamente", command=self.schedule_selected)
+            context_menu.add_separator()
         
+        context_menu.add_command(label=f"Iniciar chat do Teams com Laboratório de {lab_name}", command=self.open_teams_chat)
+        context_menu.add_command(label="Abrir Instrução de Trabalho no EmDoc", command=self.open_procedure_url)
+        context_menu.add_command(label="Editar link para Instrução de Trabalho no EmDoc", command=self.open_procedure_url)
         context_menu.add_separator()
-        context_menu.add_command(label="Selecionar Todos", command=self.select_all)
-        context_menu.add_command(label="Limpar Seleção", command=self.clear_selection)
+        context_menu.add_command(label="Selecionar todos", command=self.select_all)
+        context_menu.add_command(label="Limpar seleção", command=self.clear_selection)
         
         context_menu.post(event.x_root, event.y_root)
-    
+
     def select_all(self, event=None):
         for item in self.tree.get_children():
             self.tree.selection_add(item)
@@ -2789,14 +3139,14 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                 rs.Close()
                 
                 if local_service_id:
-                    # ✅ REMOVE previous schedules for this item
+                    
                     conn.Execute(f"""
                         DELETE FROM [IST-PGE].dbo.Time_Slots 
                         WHERE schedule_id IN (
                             SELECT id FROM [IST-PGE].dbo.Service_Schedule 
                             WHERE notes LIKE '% - {item_code} - %' AND id_sector = {sector_id}
-                        )
-                    """)
+                        )""")
+
                     conn.Execute(f"""
                         DELETE FROM [IST-PGE].dbo.Service_Schedule 
                         WHERE notes LIKE '% - {item_code} - %' AND id_sector = {sector_id}
@@ -2839,10 +3189,18 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             rs = win32com.client.Dispatch("ADODB.Recordset")
             
             sql = f"""
-                SELECT ss.id as schedule_id, ss.service_id,
-                       s.execution_time_minutes, ss.priority, ss.requested_at, ss.notes
+                SELECT 
+                ss.id as schedule_id, 
+                ss.service_id,
+                s.execution_time_minutes, 
+                ss.priority, 
+                ss.requested_at, 
+                ss.notes
+
                 FROM [IST-PGE].dbo.Service_Schedule ss
+
                 JOIN [IST-PGE].dbo.Service_Modes_Local s ON ss.service_id = s.id
+                
                 WHERE ss.status = 'PENDING' AND ss.id_sector = {sector_id}
                 ORDER BY ss.priority ASC, ss.requested_at ASC
             """
@@ -2869,7 +3227,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                 conn.Close()
                 return
             
-            self.show_loading_screen(f"Agendando {pending_count} {'serviços' if pending_count > 1 else 'serviço' } em Laboratório de {lab_name}...")
+            self.show_loading_screen(f"Agendamento de {pending_count} {'serviços' if pending_count > 1 else 'serviço' } em Laboratório de {lab_name}...")
             self.frame_certificados.update()
 
             current_time = datetime.now()
@@ -3145,16 +3503,19 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
     
     def add_calendar_exception(self):
         popup = tk.Toplevel(self.frame_certificados)
-        popup.geometry("550x300")
-        popup.minsize(400, 350)
+        popup.geometry("400x400")
+        popup.minsize(400, 400)
+        popup.maxsize(400, 400)
         popup.configure(bg='black')
         
         lab_name = self.lab_config.get('name', '')
-        popup.title(f"Adicionar Bloqueio ao Calendário - Laboratório de {lab_name}")
+        popup.title(f"Adicionar Bloqueio de Agenda - Laboratório de {lab_name}")
         
         popup.transient(self.frame_certificados)
         
-        tk.Label(popup, text="Data:", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(15, 0))
+        tk.Label(popup, text=f"Adicionar Bloqueio de Agenda",font=('Segoe UI', 13, 'bold'), bg='black', fg='white').pack(anchor='w',padx=15, pady=(15, 0))
+        
+        tk.Label(popup, text="Data:", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(15, 0),)
         
         date_frame = tk.Frame(popup, bg='black')
         date_frame.pack(fill='x', padx=20, pady=(2, 5))
@@ -3445,6 +3806,10 @@ class DatabaseViewer6: ### VISTA GERAL
             values = self.tree.item(item)['values']
             status = values[3] if len(values) > 3 else ""
             if status == "Hoje":
+                target_item = item 
+                target_index = i
+                break
+            elif status == "Esta semana":
                 target_item = item 
                 target_index = i
                 break
@@ -4208,7 +4573,12 @@ status_servidor, cor_status = verificar_disponibilidade3()
 status_servidor3, cor_status3 = status_servidor, cor_status
 
 root = tk.Tk()
-root.title("Assistente de Agenda")
+
+if bool_agenda == 1:
+    root.title("Assistente de Agenda")
+elif bool_agenda == 0:
+    root.title("Assistente de Dados")
+
 root.geometry("550x675")
 root.minsize(650, 675)
 cor_fundo = _from_rgb((27, 75, 159))
