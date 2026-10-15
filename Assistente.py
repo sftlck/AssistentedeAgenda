@@ -1,45 +1,50 @@
-import win32com.client
-import tkinter as tk
-import win32timezone
-from tkinter import filedialog
-from tkinter import ttk, messagebox
-from datetime import time, datetime, timedelta, date
-import random
-import webbrowser
-import calendar as cal
-from dateutil.relativedelta import relativedelta
-from getpass import getuser
-from urllib.parse import quote
-import socket
+import  win32com.client
+import  tkinter as tk
+import  win32timezone
+from    tkinter import filedialog
+from    tkinter import ttk, messagebox
+from    datetime import time, datetime, timedelta, date
+import  random
+import  webbrowser
+import  calendar as cal
+from    dateutil.relativedelta import relativedelta
+from    getpass import getuser
+from    urllib.parse import quote
+import  socket
 
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.colors import HexColor
-from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Paragraph
+from    reportlab.lib.pagesizes import A4, landscape
+from    reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from    reportlab.lib.colors import HexColor
+from    reportlab.lib.units import mm
+from    reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Paragraph, BaseDocTemplate, PageTemplate, Frame
 
-from reportlab.platypus import Image as RLImage
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-import tempfile
-import os
-import sys
+import reportlab.platypus as rp
+
+from    reportlab.platypus import Image as RLImage
+from    reportlab.lib.enums import TA_CENTER, TA_LEFT
+import  tempfile
+import  os
+import  sys
+
+import io
 
 import base64
 from io import BytesIO
 from PIL import Image, ImageTk
 
-LOGO_BASE64 = """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"""
+LOGO_BLACK_BASE64 = """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"""
+
 bool_agenda = 1
 
-def get_server_ip(hostname='UO061M4118173'):
+def get_server_ip(hostname='UO061M4078592'):
     try:
         return socket.gethostbyname(hostname)
     except:
         return None
 
-constante = '10.165.212.74'
+constante = '10.165.212.201'
 
-ip = get_server_ip('UO061M4118173') or '10.165.212.74'
+ip = get_server_ip('UO061M4078592') or '10.165.212.201'
 ip_zebra = ip
 
 if ip != constante:
@@ -51,31 +56,18 @@ print(f"Conectando ao servidor: {ip}")
 
 db = "IST-PGE"
 
-STR_CONN = (
-    f"Provider=SQLOLEDB;"
-    f"Data Source={ip};"
-    f"Initial Catalog={db};"
-    f"User ID=sa;"
-    f"Password=Wheelp0p2;"
-)
-
+STR_CONN = ( f"Provider=SQLOLEDB;" f"Data Source={ip};" f"Initial Catalog={db};" f"User ID=sa;" f"Password=Wheelp0p3;" )
 
 if bool_agenda == 1:
     APP_NAME = "Assistente de Agenda"
-    APP_VERSION = 1
+    APP_VERSION = 2
 else:
     APP_NAME = "Assistente de Dados"
-    APP_VERSION = 1
+    APP_VERSION = 2
 
-INFO_VERSAO =          "21/05/2026"
+INFO_VERSAO =          "22/05/2026"
 
-STR_CONN_LINKED = (
-    f"Provider=SQLOLEDB;"
-    f"Data Source={ip_linked};"
-    f"Initial Catalog={db_linked};"
-    f"User ID={user_linked};"
-    f"Password={password_linked};"
-)
+STR_CONN_LINKED = ( f"Provider=SQLOLEDB;" f"Data Source={ip_linked};" f"Initial Catalog={db_linked};" f"User ID={user_linked};" f"Password={password_linked};" )
 
 if db_linked == 'MyLogical':
     instituto = 'Petróleo, Gás e Energia'
@@ -105,7 +97,6 @@ LABS = {
     'CV': {'name':  'Volume e Massa Específica',     'sector_id': 9,     'teams_chat_id': '680cba2db76043939995da4b21cfd11c',    'sharepoint_planilha': 'https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Relat%C3%B3rios%20e%20Registros/Lab.%20Eletricidade,%20Tempo%20e%20Frequ%C3%AAncia',},
     
 }
-
 
 username00 = getuser()
 username0 = username00.split('.')[0]
@@ -147,6 +138,7 @@ def check_app_version(str_conn, app_name, current_version):
     try:
         conn = win32com.client.Dispatch("ADODB.Connection")
         rs = win32com.client.Dispatch("ADODB.Recordset")
+        print('str_conn',str_conn)
         conn.Open(str_conn)
         
         rs.Open(f"""
@@ -214,3619 +206,63 @@ def format_os_code(os_code):
         return f"0{os_code}"
     return os_code
 
+# Global variable to track the loading popup
+_loading_popup = None
 
-class LabSelector:
-    """Master tab with lab selection buttons"""
+
+def show_loading_screen(parent_frame, message="Carregando..."):
+    """Show a loading overlay - can be called from anywhere"""
+    global _loading_popup
     
-    def __init__(self, parent_notebook, cor_fundo):
-        self.cor_fundo = cor_fundo
-        self.frame = ttk.Frame(parent_notebook)
-        parent_notebook.add(self.frame, text=" Agenda de Serviços ")
-        self._create_lab_buttons()
-
-
-    def show_loading_screen(self, message="Carregando..."):
-        
-        self.loading_popup = tk.Toplevel(self.frame)
-        self.loading_popup.geometry("550x130")
-        
-        cor_fundo2 = _from_rgb((0,0,0))
-        self.loading_popup.configure(bg=cor_fundo2)
-        self.loading_popup.title("")
-        self.loading_popup.overrideredirect(True)
-        self.loading_popup.attributes('-topmost', True)
-        
-        # Center on parent
-        self.loading_popup.update_idletasks()
-        x = self.frame.winfo_rootx() + (self.frame.winfo_width() // 2) - 175
-        y = self.frame.winfo_rooty() + (self.frame.winfo_height() // 2) - 65
-        self.loading_popup.geometry(f"+{x}+{y}")
-        
-        frame = tk.Frame(self.loading_popup, bg=cor_fundo2, highlightbackground="#FFFFFF", highlightthickness=2)
-        frame.pack(fill='both', expand=True, padx=2, pady=2)
-
-        if bool_agenda == 1:
-            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
-        elif bool_agenda == 0:
-            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Dados está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
-
-        #tk.Label(frame, text=f"Laboratório de {self.lab_name}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
-        
-        # Message
-        tk.Label(frame, text=message, font=('Segoe UI', 11),bg='white', fg='black').pack(pady=(5, 5))
-        
-        self.loading_popup.grab_set()
-        self.loading_popup.update()
-
-
-    def hide_loading_screen(self):
-        """Hide the loading overlay"""
-        if hasattr(self, 'loading_popup') and self.loading_popup.winfo_exists():
-            self.loading_popup.grab_release()
-            self.loading_popup.destroy()
-
-
-    def _create_lab_buttons(self):
-        main = tk.Frame(self.frame, bg=self.cor_fundo)
-        main.pack(fill='both', expand=True, padx=20, pady=35)
-        
-        # Logo
-        try:
-            img_data = base64.b64decode(LOGO_BASE64)
-            img = Image.open(BytesIO(img_data))
-            w = 45
-            h = int(w * 3.74703357)
-            img = img.resize((h, w), Image.LANCZOS)
-            self.logo_image = ImageTk.PhotoImage(img)
-            tk.Label(main, image=self.logo_image, bg=self.cor_fundo).pack(pady=(0, 10))
-        except Exception as e:
-            print(f"Logo error: {e}")
-            
-        ttk.Label(main, text=instituto, font=("Segoe UI", 12,'bold'), background=self.cor_fundo).pack(pady=(0,5))
-
-        ttk.Label(main, text=f"{buenas}", font=("Segoe UI", 10), background='black').pack(pady=(20, 0))
-        
-        grid = tk.Frame(main, bg=self.cor_fundo)
-        grid.pack(expand=True)
-        
-        row, col = 0, 0
-        max_cols = 1
-        
-        style = ttk.Style()
-        #style.configure('Lab.TButton', font=('Segoe UI', 10), padding=1)
-        style.configure('Lab.TButton', 
-            font=('Segoe UI', 10),
-            padding=2,
-            borderwidth=2,           # Border thickness
-            relief='groove',         # raised, sunken, flat, ridge, solid, groove
-            background='#1B4B9F',    # Background color
-            foreground='black',      # Text color
-            anchor='center',         # Text alignment: center, w, e, n, s, nw, etc.
-            width=45                # Width in characters
-            )
-
-        for lab_code, lab_config in LABS.items():
-            
-            btn = ttk.Button(grid, text=f"Laboratório de {lab_config['name']}", style='Lab.TButton',command=lambda lc=lab_code, lcfg=lab_config: self.open_lab(lc, lcfg),cursor='hand2')
-            
-            #btn.bind('<Button-3>', lambda e, lcfg=lab_config: self.open_teams_chat(lcfg))
-            btn.bind('<Button-3>', lambda e, lc=lab_code, lcfg=lab_config: self.show_lab_context_menu(e, lc, lcfg))
-            btn.grid(row=row, column=col, padx=10, pady=2, sticky='ew')
-            
-            col += 1
-            if col >= max_cols:
-                col = 0
-                row += 1
-
-        btn_export_pcp = ttk.Button(main, text="Exportar Programação Geral de Serviços Metrológicos",command=self.export_all_to_pdf, cursor='hand2')
-        btn_export_pcp.pack(pady=(20, 0))
-        #btn_export_services = ttk.Button(main, text="Exportar Lista Geral de Tempos, Serviços e ITs [Em desenvolvimento]",command=self.export_all_to_pdf, cursor='hand2')
-        btn_export_services = ttk.Button(main, text="Exportar Lista Geral de Tempos, Serviços e ITs [Em desenvolvimento]",cursor='hand2')
-        btn_export_services.pack(pady=(5, 0))   
-
-    def export_all_to_pdf(self):
-        
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf")],
-            initialfile=f"Programação Geral {datetime.now().strftime('%d-%m-%Y_%Hh%M')}.pdf",
-            title=f"Programação Geral de Serviços Metrológicos {datetime.now().strftime('%d-%m-%Y')}.pdf"
-        )
-        
-        if not filename:
-            return
-        
-        self.show_loading_screen("Programação Geral de Serviços Metrológicos")
-        
-        try:
-            doc = SimpleDocTemplate(filename, pagesize=landscape(A4),
-                                leftMargin=12*mm, rightMargin=12*mm,
-                                topMargin=12*mm, bottomMargin=12*mm)
-            
-            elements = []
-            styles = getSampleStyleSheet()
-            
-            # Custom styles
-            title_style = ParagraphStyle('Title2', parent=styles['Title'],
-                fontSize=16, textColor=HexColor('#1B4B9F'), spaceAfter=3*mm,
-                alignment=TA_CENTER)
-            
-            lab_header_style = ParagraphStyle('LabHeader', parent=styles['Heading2'],
-                fontSize=11, textColor=HexColor('#1B4B9F'), spaceBefore=6*mm, spaceAfter=2*mm,
-                borderPadding=(0, 0, 1, 0))
-            
-            kpi_label_style = ParagraphStyle('KpiLabel', parent=styles['Normal'],
-                fontSize=7, textColor=HexColor('#666666'), fontName='Helvetica-Bold')
-            
-            kpi_value_style = ParagraphStyle('KpiValue', parent=styles['Normal'],
-                fontSize=8, textColor=HexColor('#333333'))
-            
-            # ===== COVER / HEADER (once) =====
-            #elements.append(Paragraph("Programação Geral de Serviços Metrológicos", title_style))
-            #elements.append(Paragraph(f"Exportado em: {datetime.now().strftime('%d/%m/%Y - %H:%M')} | {username}",styles['Normal']))
-            elements.append(Spacer(1, 5*mm))
-            
-            # ===== GLOBAL KPIs =====
-            global_total_services = 0
-            global_total_minutes = 0
-            global_total_hours = 0
-            lab_kpis = {}
-            
-            # First pass: collect all data for KPIs
-            for lab_code, lab_config in LABS.items():
-                lab_minutes = 0
-                lab_count = 0
-                try:
-                    conn = win32com.client.Dispatch("ADODB.Connection")
-                    rs = win32com.client.Dispatch("ADODB.Recordset")
-                    conn.Open(STR_CONN_LINKED)
-                    
-                    sql = f"""
-                        SELECT COUNT(*) as cnt, 
-                            SUM(CAST(LEFT(sm.execution_time, CHARINDEX(':', sm.execution_time) - 1) AS INT) * 60 +
-                                CAST(RIGHT(sm.execution_time, 2) AS INT)) as total_min
-                        FROM instruments_services iss
-                        LEFT JOIN orders_services os ON os.id = iss.id_service_order
-                        LEFT JOIN service_modes sm ON sm.id = iss.id_service
-                        LEFT JOIN instruments i ON i.id = iss.id_instrument
-                        LEFT JOIN budgets b ON b.id_order_service = os.id
-                        WHERE os.removed = 0 AND iss.removed = 0 AND sm.removed = 0
-                        AND i.removed = 0 AND b.is_last_revision = 1
-                        AND (i.id_current_sector = {lab_config['sector_id']} or i.id_current_sector = 1)
-                        AND sm.code LIKE '%631{lab_code.lower()}%'
-                    """
-                    rs.Open(sql, conn)
-                    if not rs.EOF:
-                        lab_count = rs.Fields('cnt').Value or 0
-                        lab_minutes = rs.Fields('total_min').Value or 0
-                    rs.Close()
-                    conn.Close()
-                except:
-                    pass
-                
-                lab_hours = lab_minutes / 60
-                global_total_services += lab_count
-                global_total_minutes += lab_minutes
-                global_total_hours += lab_hours
-                
-                lab_kpis[lab_code] = {
-                    'count': lab_count,
-                    'minutes': lab_minutes,
-                    'hours': round(lab_hours, 1),
-                    'avg_minutes': round(lab_minutes / lab_count, 1) if lab_count > 0 else 0
-                }
-            
-            # Global KPI Summary Table
-            kpi_data = [[
-                Paragraph("INDICADORES GLOBAIS", styles['Normal']),
-                Paragraph(f"{global_total_services} serviços", styles['Normal']),
-                Paragraph(f"{global_total_minutes} min", styles['Normal']),
-                Paragraph(f"{round(global_total_hours, 1)} horas", styles['Normal']),
-                Paragraph(f"{round(global_total_hours / 8, 1)} dias úteis (8h)", styles['Normal']),
-                Paragraph(f"~{round(global_total_hours / (8*5), 1)} semanas", styles['Normal']),
-            ]]
-            
-            kpi_table = Table(kpi_data, colWidths=[50*mm, 30*mm, 30*mm, 30*mm, 45*mm, 40*mm])
-            kpi_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
-                ('ROWBACKGROUNDS', (0, 0), (-1, 0), [HexColor('#1B4B9F')]),
-            ]))
-            #elements.append(kpi_table)
-            #elements.append(Spacer(1, 8*mm))
-            
-            # ===== SECOND PASS: Detailed tables per lab =====
-            total_all = 0
-            
-            for lab_code, lab_config in LABS.items():
-                lab_data = []
-                has_data = False
-                kpi = lab_kpis.get(lab_code, {})
-                
-                try:
-                    conn = win32com.client.Dispatch("ADODB.Connection")
-                    rs = win32com.client.Dispatch("ADODB.Recordset")
-                    conn.Open(STR_CONN_LINKED)
-                    
-                    sql = f"""
-                        SELECT 
-                            CONVERT(VARCHAR(10), os.receiving_date, 103) as 'Recebimento',
-                            CONVERT(VARCHAR(10), os.date_finished, 103) as 'Entrega',
-                            os.code AS 'OS', i.code AS 'Item',
-                            it.name as 'Tipo', sm.specification AS 'Especificação',
-                            sm.code AS 'Código', sm.execution_time AS 'execution_time'
-                        FROM instruments_services iss
-                        LEFT JOIN orders_services os ON os.id = iss.id_service_order
-                        LEFT JOIN service_modes sm ON sm.id = iss.id_service
-                        LEFT JOIN instruments i ON i.id = iss.id_instrument AND i.id_service_order = os.id
-                        LEFT JOIN budgets b ON b.id_order_service = os.id
-                        LEFT JOIN instrument_types it ON it.id = i.id_instrument_type
-                        WHERE os.removed = 0 AND iss.removed = 0 AND sm.removed = 0
-                        AND i.removed = 0 AND b.is_last_revision = 1
-                        AND (i.id_current_sector = {lab_config['sector_id']} or i.id_current_sector = 1)
-                        AND sm.code LIKE '%631{lab_code.lower()}%'
-                        ORDER BY os.receiving_date ASC
-                    """
-                    rs.Open(sql, conn)
-                    
-                    if not rs.EOF:
-                        rs.MoveFirst()
-                        while not rs.EOF:
-                            duration = self._convert_hhmm_to_minutes(rs.Fields('execution_time').Value)
-                            spec = str(rs.Fields('Especificação').Value or "")
-                            tipo = str(rs.Fields('Tipo').Value or "")
-                            
-                            os_parts = str(rs.Fields('OS').Value or "").split('/')
-                            os_code = f"{os_parts[0].lstrip('0')}/{os_parts[1]}" if len(os_parts) > 1 else ""
-                            
-                            lab_data.append([
-                                Paragraph(str(rs.Fields('Recebimento').Value or ""), styles['Normal']),
-                                Paragraph(str(rs.Fields('Entrega').Value or ""), styles['Normal']),
-                                Paragraph(str(os_code), styles['Normal']),
-                                Paragraph(str(rs.Fields('Item').Value or ""), styles['Normal']),
-                                Paragraph(tipo, styles['Normal']),
-                                Paragraph(spec, styles['Normal']),
-                                Paragraph(str(rs.Fields('Código').Value or ""), styles['Normal']),
-                                Paragraph(f"{duration} min", styles['Normal']),
-                            ])
-                            rs.MoveNext()
-                        has_data = True
-                    
-                    rs.Close()
-                    conn.Close()
-                except:
-                    lab_data.append([Paragraph("Erro", styles['Normal']) for _ in range(8)])
-                    has_data = True
-                
-                if has_data:
-                    count = len(lab_data)
-                    total_all += count
-                    
-                    # ===== LAB HEADER + KPIs =====
-                    
-                    elements.append(Paragraph("Programação de Serviços Metrológicos", styles['Title']))
-                    elements.append(Paragraph(f"Laboratório de {lab_config['name']}", styles['Title']))
-                    #elements.append(Paragraph(f"Laboratório de {lab_config['name']}",lab_header_style))
-                    
-                    kpi_row_data = [[
-                        Paragraph(f"{count} serviços", kpi_value_style),
-                        Paragraph(f"{kpi.get('hours', 0)} horas", kpi_value_style),
-                        Paragraph(f"{kpi.get('avg_minutes', 0)} min/serviço", kpi_value_style),
-                        Paragraph(f"~{round(kpi.get('hours', 0) / 8, 1)} dias úteis", kpi_value_style),
-                        #Paragraph(f"{(count / global_total_services * 100) if global_total_services > 0 else 0:.1f}% do total geral", kpi_value_style),
-                    ]]
-
-                    #kpi_row_data = [[
-                    #    Paragraph(f"Total: {count} serviços", kpi_value_style),
-                    #    Paragraph(f"Carga: {kpi.get('hours', 0)} horas", kpi_value_style),
-                    #    Paragraph(f"Média: {kpi.get('avg_minutes', 0)} min/serviço", kpi_value_style),
-                    #    Paragraph(f"~{round(kpi.get('hours', 0) / 8, 1)} dias úteis", kpi_value_style),
-                    #    Paragraph(f"{(count / global_total_services * 100) if global_total_services > 0 else 0:.1f}% do total geral", kpi_value_style),
-                    #]]
-                    
-                    kpi_row = Table(kpi_row_data, colWidths=[45*mm, 35*mm, 45*mm, 40*mm, 55*mm])
-                    kpi_row.setStyle(TableStyle([
-                        ('BACKGROUND', (0, 0), (-1, 0), HexColor('#E8EDF5')),
-                        ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#1B4B9F')),
-                        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-                        ('FONTSIZE', (0, 0), (-1, -1), 7),
-                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
-                        ('TOPPADDING', (0, 0), (-1, 0), 4),
-                        ('BOTTOMPADDING', (0, 0), (-1, 0), 4),
-                    ]))
-                    elements.append(kpi_row)
-                    elements.append(Spacer(1, 3*mm))
-                    
-                    headers = ["Recebimento", "Entrega", "OS", "Item", "Tipo", "Especificação", "Código", "Duração"]
-                    table_data = [headers] + lab_data
-                    
-                    col_widths = [25*mm, 25*mm, 25*mm, 25*mm, 35*mm, 110*mm, 25*mm, 18*mm]
-                    table = Table(table_data, colWidths=col_widths, repeatRows=1)
-                    
-                    table.setStyle(TableStyle([
-                        ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
-                        ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
-                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                        ('FONTSIZE', (0, 0), (-1, 0), 7),
-                        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                        ('FONTSIZE', (0, 1), (-1, -1), 6),
-                        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
-                        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F5F7FA')]),
-                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                        ('WORDWRAP', (0, 0), (-1, -1), True),
-                    ]))
-                    
-                    elements.append(table)
-                    elements.append(Spacer(1, 8*mm))
-                    elements.append(Paragraph(f"Exportado em: {datetime.now().strftime('%d/%m/%Y - %H:%M')} | {username}",styles['Normal']))
-                    elements.append(PageBreak())
-            
-            elements.append(Paragraph("Indicadores de Produção", styles['Title']))
-            #elements.append(Paragraph("Resumo Geral - Indicadores de Produção", title_style))
-            elements.append(Spacer(1, 8*mm))
-            
-            summary_data = [["Laboratório", "Serviços", "Horas Totais", "Média (min/serv)", "Dias Úteis", "% do Total"]]
-            for lab_code, lab_config in LABS.items():
-                kpi = lab_kpis.get(lab_code, {})
-                pct = (kpi.get('count', 0) / global_total_services * 100) if global_total_services > 0 else 0
-                summary_data.append([
-                    Paragraph(lab_config['name'], styles['Normal']),
-                    Paragraph(str(kpi.get('count', 0)), styles['Normal']),
-                    Paragraph(str(kpi.get('hours', 0)), styles['Normal']),
-                    Paragraph(str(kpi.get('avg_minutes', 0)), styles['Normal']),
-                    Paragraph(str(round(kpi.get('hours', 0) / 8, 1)), styles['Normal']),
-                    Paragraph(f"{pct:.1f}%", styles['Normal']),
-                ])
-                
-            
-            summary_data.append([
-                Paragraph("TOTAL", styles['Normal']),
-                Paragraph(str(global_total_services), styles['Normal']),
-                Paragraph(str(round(global_total_hours, 1)), styles['Normal']),
-                Paragraph(str(round(global_total_minutes / global_total_services, 1) if global_total_services > 0 else 0), styles['Normal']),
-                Paragraph(str(round(global_total_hours / 8, 1)), styles['Normal']),
-                Paragraph("100%", styles['Normal']),
-            ])
-            
-            summary_table = Table(summary_data, colWidths=[50*mm, 25*mm, 30*mm, 35*mm, 30*mm, 25*mm])
-            summary_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B4B9F')),
-                ('BACKGROUND', (0, -1), (-1, -1), HexColor('#D4E4F5')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 7),
-                ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -2), [HexColor('#FFFFFF'), HexColor('#F5F7FA')]),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ]))
-            elements.append(summary_table)
-            
-            elements.append(Spacer(1, 8*mm))
-            elements.append(Paragraph(f"Exportado em: {datetime.now().strftime('%d/%m/%Y - %H:%M')} | {username}",styles['Normal']))
-            
-            doc.build(elements)
-            os.startfile(filename)
-            self.hide_loading_screen()
-            
-        except Exception as e:
-            self.hide_loading_screen()
-            messagebox.showerror("Erro", f"Falha ao gerar PDF:\n{str(e)}")
-
-    @staticmethod
-    def _convert_hhmm_to_minutes(time_str):
-        if not time_str:
-            return 0
-        try:
-            parts = str(time_str).strip().split(':')
-            return int(parts[0]) * 60 + int(parts[1])
-        except:
-            return 0
-
-    def show_lab_context_menu(self, event, lab_code, lab_config):
-        """Right-click context menu for lab button"""
-        context_menu = tk.Menu(self.frame, tearoff=0)
-        
-        chat_id = lab_config.get('teams_chat_id', '')
-        if chat_id:
-            context_menu.add_command(label=f"Iniciar chat do Teams com Laboratório de {lab_config['name']}",command=lambda lcfg=lab_config: self.open_teams_chat(lcfg))
-            #context_menu.add_command(label=f"Exportar Programação de Serviços de Laboratório de {lab_config['name']} [Em desenvolvimento]",command=lambda lcfg=lab_config: self.export_lab_to_pdf())
-        
-        planilha_link = lab_config.get('sharepoint_planilha', '')
-        #if planilha_link:
-        #    context_menu.add_command(label=f"📊 Abrir Planilha de Cálculo",command=lambda lcfg=lab_config: webbrowser.open(lcfg.get('sharepoint_planilha', '')))
-        
-        context_menu.post(event.x_root, event.y_root)
-
-    def open_teams_chat(self, lab_config):
-        chat_id = lab_config.get('teams_chat_id', '')
-        if chat_id:
-            link = f"https://teams.cloud.microsoft/l/chat/19:{chat_id}@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
-            webbrowser.open(link)   
-
-    def open_lab(self, lab_code, lab_config):
-        """Open lab calendar + services in a new window"""
-        lab_window = tk.Toplevel(self.frame)
-        lab_window.transient(self.frame)
-        lab_window.geometry("1150x700")
-        lab_window.minsize(900, 600)
-        lab_window.title(f"Calendário/Lista de Serviços - Laboratório de {lab_config['name']}")
-        lab_window.configure(bg=self.cor_fundo)
-        
-        lab_notebook = ttk.Notebook(lab_window)
-        lab_notebook.pack(fill='both', expand=True)
-        
-        ServiceScheduler(lab_notebook, STR_CONN, self.cor_fundo,id_sector=lab_config['sector_id'],lab_name=lab_config['name'],lab_config=lab_config)
-        ServiceSchedulerLinkedDirect(lab_notebook, STR_CONN_LINKED, STR_CONN, self.cor_fundo, lab_code=lab_code, lab_config=lab_config)
-
-
-class ProcedureManager:
-    """Gerenciador de Procedimentos - Update procedure_name and procedure_url"""
+    # Hide any existing loading screen first
+    #hide_loading_screen()
     
-    def __init__(self, parent, str_conn, str_conn_primary, cor_fundo, lab_code="", lab_config=None):
-        self.str_conn = str_conn
-        self.str_conn_primary = str_conn_primary
-        self.cor_fundo = 'black'
-        self.lab_code = lab_code
-        self.lab_config = lab_config or {}
-        self.all_rows = []
-        self.filtered_rows = []  # ADD THIS
-        
-        self._open_window(parent)
+    _loading_popup = tk.Toplevel(parent_frame)
+    _loading_popup.geometry("550x130")
     
-    def _sanitize_input(self, text):
-        """Remove dangerous characters to prevent SQL injection"""
-        if not text:
-            return ""
-        # Remove single quotes, semicolons, double dashes
-        dangerous = ["'", ";", "--", "/*", "*/", "xp_", "sp_", "exec", "drop", "delete", "truncate"]
-        sanitized = text
-        for d in dangerous:
-            sanitized = sanitized.replace(d, "")
-        return sanitized.strip()
+    cor_fundo2 = _from_rgb((0, 0, 0))
+    _loading_popup.configure(bg=cor_fundo2)
+    _loading_popup.title("")
+    _loading_popup.overrideredirect(True)
+    _loading_popup.attributes('-topmost', True)
     
-    def _open_window(self, parent):
-        lab_name = self.lab_config.get('name', self.lab_code)
-        
-        self.window = tk.Toplevel(parent)
-        self.window.geometry("900x550")
-        self.window.minsize(900, 550)
-        self.window.configure(bg=self.cor_fundo)
-        self.window.title(f"Lista de Tempos, Serviços e ITs - Laboratório de {lab_name}")
-        self.window.transient(parent)
-        
-        # ===== TOP FRAME =====
-        top_frame = tk.Frame(self.window, bg=self.cor_fundo)
-        top_frame.pack(fill='x', padx=15, pady=(15, 5))
-        
-        tk.Label(top_frame, text=f"Lista de Tempos, Serviços e ITs",font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg='white').pack(anchor='w')
-        
-        # ===== SEARCH =====
-        search_frame = tk.Frame(self.window, bg=self.cor_fundo)
-        search_frame.pack(fill='x', padx=15, pady=(10, 5))
-        
-        tk.Label(search_frame, text="Buscar:", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white').pack(side='left', padx=(0, 5))
-        
-        self.search_var = tk.StringVar()
-        self.search_var.trace('w', lambda *args: self._filter_treeview())
-        ttk.Entry(search_frame, textvariable=self.search_var, width=40).pack(side='left', padx=5)
-        
-        # ===== TREEVIEW =====
-        tree_frame = ttk.Frame(self.window)
-        tree_frame.pack(fill='both', expand=True, padx=15, pady=10)
-        
-        tree_scroll_y = ttk.Scrollbar(tree_frame)
-        tree_scroll_y.pack(side='right', fill='y')
-        
-        tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
-        tree_scroll_x.pack(side='bottom', fill='x')
-        
-        columns = ("Código", "Duração", "Serviço", "Descrição","Instrução de Trabalho", "Link")
-        
-        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",yscrollcommand=tree_scroll_y.set,xscrollcommand=tree_scroll_x.set,selectmode="browse")
-        
-        tree_scroll_y.config(command=self.tree.yview)
-        tree_scroll_x.config(command=self.tree.xview)
-        
-        self.tree.heading("Código",                 text="Código")
-        self.tree.heading("Duração",                text="Duração")
-        self.tree.heading("Serviço",                text="Serviço")
-        self.tree.heading("Descrição",              text="Descrição")
-        self.tree.heading("Instrução de Trabalho",  text="Instrução de Trabalho")
-        self.tree.heading("Link",                   text="Link")
-        
-        self.tree.column("Código",                  width=70,minwidth=65)
-        self.tree.column("Duração",                 width=50,minwidth=50)
-        self.tree.column("Serviço",                 width=200)
-        self.tree.column("Descrição",               width=100)
-        self.tree.column("Instrução de Trabalho",   width=120,minwidth=120)
-        self.tree.column("Link",                    width=250)
-        
-        self.tree.pack(expand=True, fill='both')
-        self.tree.bind('<<TreeviewSelect>>', self._on_select)
-        self.tree.bind('<Double-1>', lambda e: self._edit_selected())
-        
-        # ===== EDIT FRAME =====
-        edit_frame = tk.LabelFrame(self.window, text=" Editar Dados [Em desenvolvimento] ", font=('Segoe UI', 10, 'bold'),bg=self.cor_fundo, fg="#FFFFFF",padx=10, pady=10)
-        edit_frame.pack(fill='x', padx=15, pady=(5, 10))
-        
-        # Current info
-        self.lbl_current = tk.Label(edit_frame, text="Selecione um serviço na lista acima para editar.",font=('Segoe UI', 9), bg=self.cor_fundo, fg='#B7D5F5', anchor='w', justify='left')
-        self.lbl_current.pack(anchor='w', pady=(0, 5))
-        
-        # Procedure Name
-        name_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
-        name_frame.pack(fill='x', pady=3)
-        
-        tk.Label(name_frame, text="Nome da Instrução de Trabalho:", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
-        
-        self.proc_name_var = tk.StringVar()
-        self.entry_name = ttk.Entry(name_frame, textvariable=self.proc_name_var, width=60)
-        self.entry_name.pack(side='left', padx=5, fill='x', expand=True)
-        
-        # Procedure URL
-        url_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
-        url_frame.pack(fill='x', pady=3)
-        
-        tk.Label(url_frame, text="Link do documento (EmDoc):", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
-        
-        self.proc_url_var = tk.StringVar()
-        self.entry_url = ttk.Entry(url_frame, textvariable=self.proc_url_var, width=55)
-        self.entry_url.pack(side='left', padx=5, fill='x', expand=True)
-        
-        # Buttons
-        btn_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
-        btn_frame.pack(fill='x', pady=(10, 0))
-        
-        self.btn_save = ttk.Button(btn_frame, text="Salvar", command=self._save_procedure, cursor='hand2')
-        self.btn_save.pack(side='left', padx=5)
-        self.btn_save.config(state='disabled')
-        
-        ttk.Button(btn_frame, text="Atualizar Lista", command=self._load_data).pack(side='left', padx=5)
-        
-        ttk.Button(btn_frame, text="Exportar CSV", command=self._export_to_csv, cursor='hand2').pack(side='left', padx=5)
-
-        #self.btn_clear = ttk.Button(btn_frame, text="Limpar", command=self._clear_fields, cursor='hand2')
-        #self.btn_clear.pack(side='left', padx=5)
-        
-        #ttk.Button(btn_frame, text="Fechar", command=self.window.destroy).pack(side='right', padx=5)
-        
-        # Status
-        self.status_label = tk.Label(edit_frame, text="", font=('Segoe UI', 9),bg=self.cor_fundo, fg='#28A745')
-        self.status_label.pack(anchor='w', pady=(5, 0))
-        
-        # Load data
-        self._load_data()
-        self._clear_fields()
+    # Center on parent
+    _loading_popup.update_idletasks()
+    x = parent_frame.winfo_rootx() + (parent_frame.winfo_width() // 2) - 275
+    y = parent_frame.winfo_rooty() + (parent_frame.winfo_height() // 2) - 65
+    _loading_popup.geometry(f"+{x}+{y}")
     
-    def _load_data(self):
-        """Load services with their procedure info"""
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        
-        self.all_rows.clear()
-        self.filtered_rows.clear()  # ADD
-        sector_id = self.lab_config.get('sector_id', 0)
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn_primary)
-            
-            # Get services that exist in Service_Modes_Local
-            sql = f"""
+    frame = tk.Frame(_loading_popup, bg=cor_fundo2, highlightbackground="#FFFFFF", highlightthickness=2)
+    frame.pack(fill='both', expand=True, padx=2, pady=2)
 
-                SELECT 
-                sml.id, 
-                sml.code, 
-                sml.execution_time_minutes, 
-                sml.specification,
-                sml.description, 
-                sml.procedure_name, 
-                sml.procedure_url      
 
-                FROM [IST-PGE].dbo.Service_Modes_Local sml
-
-                WHERE sml.code LIKE '%631{self.lab_code.lower()}%'
-
-                ORDER BY sml.code ASC
-            """
-            rs.Open(sql, conn)
-            
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    row_data = {
-                        'id': rs.Fields('id').Value,
-                        'code': rs.Fields('code').Value if rs.Fields('code').Value else "",
-                        'execution_time_minutes': f"{rs.Fields('execution_time_minutes').Value} min"  if rs.Fields('execution_time_minutes').Value else "",
-                        'specification': rs.Fields('specification').Value if rs.Fields('specification').Value else "",
-                        'description': rs.Fields('description').Value if rs.Fields('description').Value else "",
-                        'procedure_name': rs.Fields('procedure_name').Value if rs.Fields('procedure_name').Value else "",
-                        'procedure_url': rs.Fields('procedure_url').Value if rs.Fields('procedure_url').Value else "",
-                    }
-                    self.all_rows.append(row_data)
-                    
-                    proc_name = row_data['procedure_name'] if row_data['procedure_name'] else "(vazio)"
-                    proc_url = row_data['procedure_url'] if row_data['procedure_url'] else "(vazio)"
-                    
-                    self.tree.insert("", "end", values=(
-                        row_data['code'],
-                        row_data['execution_time_minutes'],
-                        row_data['specification'],
-                        row_data['description'],
-                        proc_name,
-                        proc_url
-                    ))
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao carregar dados:\n{str(e)}")
-
-    def _filter_treeview(self):
-        """Filter treeview by search"""
-        search_term = self.search_var.get().lower()
-        
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        
-        self.filtered_rows.clear()  # Reset filtered list
-        
-        for row in self.all_rows:
-            if not search_term or \
-            search_term in str(row['code']).lower() or \
-            search_term in str(row['execution_time_minutes']).lower() or \
-            search_term in str(row['specification']).lower() or \
-            search_term in str(row['description']).lower() or \
-            search_term in str(row['procedure_name']).lower():
-                
-                self.filtered_rows.append(row)  # Track which rows are visible
-                
-                proc_name = row['procedure_name'] if row['procedure_name'] else "(vazio)"
-                proc_url = row['procedure_url'] if row['procedure_url'] else "(vazio)"
-                
-                self.tree.insert("", "end", values=(
-                    row['code'], row['execution_time_minutes'],
-                    row['specification'], row['description'], proc_name, proc_url
-                ))
-
-    def _on_select(self, event):
-        """Populate fields when a row is selected"""
-        selected = self.tree.selection()
-        if not selected:
-            self._clear_fields()
-            return
-        
-        all_items = self.tree.get_children()
-        idx = all_items.index(selected[0])
-        
-        # Use filtered_rows if filtering is active, otherwise all_rows
-        source = self.filtered_rows if self.filtered_rows else self.all_rows
-        
-        if idx < len(source):
-            row = source[idx]
-            spec = row['specification']
-            display_spec = spec if len(spec) < 70 else spec[:70] + '...'
-            self.lbl_current.config(text=f"Editando: {row['code']} - {display_spec}")
-            
-            self.proc_name_var.set(row['procedure_name'])
-            self.proc_url_var.set(row['procedure_url'])
-            self.btn_save.config(state='normal')
-            self._selected_idx = idx
-            self._selected_from_filtered = bool(self.filtered_rows)  # Track source
-
-    def _clear_fields(self):
-        """Clear edit fields"""
-        #self.lbl_current.config(text="Selecione um serviço na lista acima para editar.")
-        self.proc_name_var.set("")
-        self.proc_url_var.set("")
-        self.btn_save.config(state='disabled')
-        self._selected_idx = None
-        self.status_label.config(text="")
+    tk.Label(frame, text=f"Oioi, {username}!",font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
     
-    def _edit_selected(self):
-        """Focus on name field when double-clicking"""
-        if self.btn_save.cget('state') == 'normal':
-            self.entry_name.focus_set()
+    tk.Label(frame, text=message, font=('Segoe UI', 11),bg='white', fg='black').pack(pady=(5, 5))
     
-    def _save_procedure(self):
-        """Save procedure info to database"""
-        if self._selected_idx is None:
-            return
-        source = self.filtered_rows if getattr(self, '_selected_from_filtered', False) else self.all_rows
-        row = source[self._selected_idx]
-        
-        #row = self.all_rows[self._selected_idx]
-        service_id = row['id']
-        service_code = row['code']
-        
-        # Sanitize inputs
-        proc_name = self._sanitize_input(self.proc_name_var.get().strip())
-        proc_url = self._sanitize_input(self.proc_url_var.get().strip())
-        
-        # Validate URL format (basic check)
-        if proc_url and not (proc_url.startswith('http://') or proc_url.startswith('https://')):
-            if not messagebox.askyesno("Aviso", "A URL não começa com http:// ou https://. Deseja salvar mesmo assim?"):
-                return
-        
-        # Confirm
-        confirm = messagebox.askyesno("Confirmar",
-            f"Atualizar procedimento para:\n\n"
-            f"Código: {service_code}\n"
-            f"Nome: {proc_name if proc_name else '(vazio)'}\n"
-            f"URL: {proc_url if proc_url else '(vazio)'}\n\n"
-            f"Continuar?")
-        
-        if not confirm:
-            return
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn_primary)
-            
-            sql = f"""
-                UPDATE [IST-PGE].dbo.Service_Modes_Local
-                SET procedure_name = {'NULL' if not proc_name else f"'{proc_name.replace(chr(39), chr(39)+chr(39))}'"},
-                    procedure_url = {'NULL' if not proc_url else f"'{proc_url.replace(chr(39), chr(39)+chr(39))}'"}
-                WHERE id = {service_id}
-            """
-            conn.Execute(sql)
-            conn.Close()
-            
-            self.status_label.config(text=f"Instrução de trabalho de {service_code} atualizado com sucesso!")
-            
-            # Refresh data
-            self._load_data()
-            self._clear_fields()
-            
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao salvar:\n{str(e)}")
-            self.status_label.config(text="Erro ao salvar!")
+    _loading_popup.grab_set()
+    _loading_popup.update()
 
-    def _export_to_csv(self):
-        """Export treeview data to CSV"""
-        filename = filedialog.asksaveasfilename(defaultextension=".csv",filetypes=[("CSV files", "*.csv")],initialfile=f"Servicos_IT_{self.lab_code}.csv",title="Exportar para CSV")
-        
-        if not filename:
-            return
-        
-        try:
-            import csv
-            
-            with open(filename, 'w', newline='', encoding='utf-8-sig') as f:
-                writer = csv.writer(f, delimiter=';')
-                
-                # Header
-                writer.writerow(["Código", "Duração", "Serviço", "Descrição", "Instrução de Trabalho", "Link"])
-                
-                # Data from all_rows (full data, not filtered)
-                for row in self.all_rows:
-                    writer.writerow([
-                        row['code'],
-                        row['execution_time_minutes'],
-                        row['specification'],
-                        row['description'],
-                        row['procedure_name'] if row['procedure_name'] else "(vazio)",
-                        row['procedure_url'] if row['procedure_url'] else "(vazio)"
-                    ])
-            
-            self.status_label.config(text=f"Arquivo Exportado: {os.path.basename(filename)}")
-            os.startfile(filename)
-            
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao exportar:\n{str(e)}")
 
-class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
-    """ ABA: Agendamento de Serviços (Calibração FIFO) - Multi-Laboratório """
+def hide_loading_screen():
+    """Hide the loading overlay - can be called from anywhere"""
+    global _loading_popup
     
-    def __init__(self, parent_notebook, str_conn, cor_fundo, id_sector=None, lab_name="", lab_config=None):
+    if _loading_popup is not None and _loading_popup.winfo_exists():
+        _loading_popup.grab_release()
+        _loading_popup.destroy()
+        _loading_popup = None
+
+class DatabaseViewer2: ### PADRÕES
+
+    def __init__(self, parent_notebook, str_conn, cor_fundo):
         self.str_conn = str_conn
         self.cor_fundo = cor_fundo
-        self.id_sector = id_sector
-        self.lab_name = lab_name
-        self.lab_config = lab_config or {}
-        
-        tab_name = f" Calendário de {self.lab_name} "
+        self.selected_items = []
         self.frame_certificados = ttk.Frame(parent_notebook)
-        parent_notebook.add(self.frame_certificados, text=tab_name)
+        parent_notebook.add(self.frame_certificados, text=" Padrões ")
         
-        parent_notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
-        
-        self.current_month_offset = 0
-        self.calendar_data = {}
-        self.selected_date = None
-        
-        self.setup_ui()
-        self.load_services()
-        self.refresh_calendar()
-
-    def open_procedure_manager(self):
-        """Open the procedure management window"""
-        ProcedureManager(
-            self.frame_certificados,
-            self.str_conn,
-            self.str_conn_primary,
-            self.cor_fundo,
-            lab_code=self.lab_code,
-            lab_config=self.lab_config
-        )
-
-    def on_tab_changed(self, event):
-        notebook = event.widget
-        current_tab = notebook.select()
-        current_tab_text = notebook.tab(current_tab, "text")
-        
-        #if self.lab_name in current_tab_text:
-        #    self.refresh_calendar()
-        if current_tab_text:
-            self.refresh_calendar()
-
-
-    def show_loading_screen(self, message="Carregando..."):
-        
-        self.loading_popup = tk.Toplevel(self.frame_certificados)
-        self.loading_popup.geometry("550x130")
-        cor_fundo2 = _from_rgb((0,0,0))
-        self.loading_popup.configure(bg=cor_fundo2)
-        self.loading_popup.title("")
-        self.loading_popup.overrideredirect(True)
-        self.loading_popup.attributes('-topmost', True)
-        
-        # Center on parent
-        self.loading_popup.update_idletasks()
-        x = self.frame_certificados.winfo_rootx() + (self.frame_certificados.winfo_width() // 2) - 175
-        y = self.frame_certificados.winfo_rooty() + (self.frame_certificados.winfo_height() // 2) - 65
-        self.loading_popup.geometry(f"+{x}+{y}")
-        
-        frame = tk.Frame(self.loading_popup, bg=cor_fundo2, highlightbackground="#FFFFFF", highlightthickness=2)
-        frame.pack(fill='both', expand=True, padx=2, pady=2)
-
-        
-        if bool_agenda == 1:
-            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
-        elif bool_agenda == 0:
-            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Dados está carregando:", font=('Segoe UI', 10), background='black', fg="#FFFFFF").pack(pady=(15, 5))
-
-
-        #tk.Label(frame, text=f"Laboratório de {self.lab_name}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
-        
-        # Message
-        tk.Label(frame, text=message, font=('Segoe UI', 11),bg='white', fg='black').pack(pady=(5, 5))
-        
-        self.loading_popup.grab_set()
-        self.loading_popup.update()
-
-
-    def hide_loading_screen(self):
-        """Hide the loading overlay"""
-        if hasattr(self, 'loading_popup') and self.loading_popup.winfo_exists():
-            self.loading_popup.grab_release()
-            self.loading_popup.destroy()
-
-
-    def reschedule_selected_services_manual(self, tree, selected_items):
-        """Manually reschedule only selected services"""
-        popup = tree.winfo_toplevel()
-        calendar_key = getattr(popup, 'calendar_key', None)
-        if not calendar_key:
-            return
-        
-        all_items = tree.get_children()
-        selected_indices = [all_items.index(item) for item in selected_items]
-        schedule_ids = getattr(popup, 'schedule_ids', [])
-        selected_schedule_ids = [schedule_ids[i] for i in selected_indices if i < len(schedule_ids)]
-        
-        if not selected_schedule_ids:
-            return
-        
-        count = len(selected_schedule_ids)
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        confirm = messagebox.askyesno("Info agendamento", 
-            f"Deseja reagendar manualmente {'o serviço selecionado' if count == 1 else f'os {count} serviços selecionados'} de {date_str}?")
-        if not confirm:
-            return
-        
-        # Open manual popup — but pass selected_schedule_ids instead of full day
-        self._open_manual_reschedule_popup_selected(calendar_key, selected_schedule_ids)
-
-
-    def _open_manual_reschedule_popup_selected(self, calendar_key, selected_schedule_ids):
-        """Manual reschedule popup for selected services only"""
-        popup = tk.Toplevel(self.frame_certificados)
-        popup.geometry("380x280")
-        popup.configure(bg=self.cor_fundo)
-        popup.title("Reagendamento Manual")
-        
-        count = len(selected_schedule_ids)
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        
-        tk.Label(popup, text=f"Reagendar {count} {'serviço selecionado' if count == 1 else 'serviços selecionados'} de {date_str}",
-                font=('Segoe UI', 10, 'bold'), bg=self.cor_fundo, fg='white').pack(pady=(15, 10))
-        
-        tk.Label(popup, text="Nova data (DD/MM/AAAA):", font=('Segoe UI', 9),
-                bg=self.cor_fundo, fg='white').pack(anchor='w', padx=30, pady=(10, 0))
-        
-        date_frame = tk.Frame(popup, bg=self.cor_fundo)
-        date_frame.pack(fill='x', padx=30, pady=(2, 5))
-        
-        tomorrow = datetime.now() + timedelta(days=1)
-        day_var = tk.StringVar(value=tomorrow.strftime('%d'))
-        month_var = tk.StringVar(value=tomorrow.strftime('%m'))
-        year_var = tk.StringVar(value=tomorrow.strftime('%Y'))
-        
-        ttk.Entry(date_frame, textvariable=day_var, width=3).pack(side='left')
-        tk.Label(date_frame, text="/", bg=self.cor_fundo, fg='white').pack(side='left')
-        ttk.Entry(date_frame, textvariable=month_var, width=3).pack(side='left')
-        tk.Label(date_frame, text="/", bg=self.cor_fundo, fg='white').pack(side='left')
-        ttk.Entry(date_frame, textvariable=year_var, width=5).pack(side='left')
-        
-        tk.Label(popup, text="Horário de início (HH:MM):", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white').pack(anchor='w', padx=30, pady=(10, 0))
-        
-        time_var = tk.StringVar(value="08:00")
-        ttk.Entry(popup, textvariable=time_var, width=10).pack(anchor='w', padx=30, pady=(2, 5))
-        
-        tk.Label(popup, text="⚠ Os serviços selecionados serão agendados\n   em sequência a partir desta data e horário.",font=('Segoe UI', 8), bg=self.cor_fundo, fg='#FFD700').pack(pady=(10, 5))
-        
-        btn_frame = tk.Frame(popup, bg=self.cor_fundo)
-        btn_frame.pack(pady=15)
-        
-        ttk.Button(btn_frame, text=" Confirmar Reagendamento ",command=lambda: self._execute_manual_reschedule_selected(calendar_key, popup, selected_schedule_ids,day_var, month_var, year_var, time_var)).pack(side='left', padx=5)
-        ttk.Button(btn_frame, text=" Cancelar ", command=popup.destroy).pack(side='left', padx=5)
-
-
-    def _execute_manual_reschedule_selected(self, calendar_key, popup, selected_schedule_ids, day_var, month_var, year_var, time_var):
-        """Execute manual reschedule for selected services only"""
-        try:
-            day = day_var.get().strip().zfill(2)
-            month = month_var.get().strip().zfill(2)
-            year = year_var.get().strip()
-            new_date = datetime.strptime(f"{year}-{month}-{day}", '%Y-%m-%d').date()
-            
-            time_str = time_var.get().strip()
-            parts = time_str.split(':')
-            if len(parts) != 2:
-                messagebox.showwarning("Aviso", "Formato de horário inválido!")
-                return
-            new_time = time(int(parts[0]), int(parts[1]))
-            new_datetime = datetime.combine(new_date, new_time)
-            
-            popup.destroy()
-            
-            count = len(selected_schedule_ids)
-            
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            
-            id_list = ','.join(str(sid) for sid in selected_schedule_ids)
-            conn.Execute(f"UPDATE [IST-PGE].dbo.Service_Schedule SET status = 'PENDING', scheduled_start = NULL, scheduled_end = NULL, updated_at = GETDATE() WHERE id IN ({id_list})")
-            conn.Execute(f"DELETE FROM [IST-PGE].dbo.Time_Slots WHERE schedule_id IN ({id_list})")
-            conn.Close()
-            
-            self.show_loading_screen(f"Agendamento de {count} {'item' if count == 1 else 'itens'} em Laboratório de {self.lab_name}")
-            self.schedule_all_pending(from_date=new_datetime)
-            
-            self.refresh_calendar()
-            self.hide_loading_screen()
-            
-            new_date_br = new_date.strftime('%d/%m/%Y')
-            messagebox.showinfo('Info agendamento', f"{'Serviço reagendado' if count == 1 else 'Serviços reagendados'} para {new_date_br} a partir das {new_time.strftime('%H:%M')}")
-            
-        except ValueError:
-            messagebox.showwarning("Aviso", "Data ou horário inválido!")
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
-
-    def setup_ui(self):
-        main_container = tk.Frame(self.frame_certificados, bg=self.cor_fundo)
-        main_container.pack(fill='both', expand=True, padx=10, pady=10)
-        
-        self.calendar_frame = tk.Frame(main_container, bg=self.cor_fundo)
-        self.calendar_frame.pack(side='left', fill='both', expand=True)
-        
-        self.status_label = ttk.Label(self.frame_certificados, text="Pronto para agendamento", font=("Segoe UI", 12))
-        self.status_label.pack(pady=5)
-        
-    def open_teams_chat(self):
-        try:
-            chat_id = self.lab_config.get('teams_chat_id', '')
-            if chat_id:
-                link = f"https://teams.cloud.microsoft/l/chat/19:{chat_id}@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
-                webbrowser.open(link)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao abrir chat:\n{str(e)}")
-
-    def open_teams_link_planilha(self, item):
-        try:
-            link = self.lab_config.get('sharepoint_planilha', '')
-            if link:
-                webbrowser.open(link)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao abrir link de diretório:\n\n{str(e)}")
-
-    def extract_code_from_notes(self, notes):
-        if not notes:
-            return ""
-        parts = notes.split(' - ')
-        if len(parts) >= 2:
-            return parts[1]
-        return ""
-
-    def extract_os_from_notes(self, notes):
-        if not notes:
-            return ""
-        parts = notes.split(' - ')
-        if len(parts) >= 1:
-            return parts[0].replace("OS ", "").strip()
-        return ""
-
-    def extract_item_from_notes(self, notes):
-        if not notes:
-            return notes
-        parts = notes.split(' - ')
-        if len(parts) >= 2:
-            return parts[0], parts[1], parts[2]
-        return notes[:15]
-
-    def load_exceptions_for_date(self, check_date):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-            
-            date_str = check_date.strftime('%Y-%m-%d') if isinstance(check_date, date) else str(check_date)
-            
-            sql = f"""
-                SELECT exception_type, start_time, end_time, notes
-                FROM [IST-PGE].dbo.Calendar_Exceptions
-                WHERE exception_date = '{date_str}'
-                AND is_available = 0
-                AND id_sector = {self.id_sector}
-            """
-            rs.Open(sql, conn)
-            
-            exceptions = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    start_t = rs.Fields('start_time').Value
-                    end_t = rs.Fields('end_time').Value
-                    notes = rs.Fields('notes').Value if rs.Fields('notes').Value else ""
-                    
-                    if start_t and isinstance(start_t, str):
-                        start_t = str(start_t)[:5]
-                    if end_t and isinstance(end_t, str):
-                        end_t = str(end_t)[:5]
-                    
-                    if start_t and end_t:
-                        exceptions.append(f"{start_t}-{end_t}: {notes}")
-                    else:
-                        exceptions.append(f"08:00-17:00: {notes}")
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            return exceptions
-        except Exception as e:
-            print(f"Error loading exceptions: {e}")
-            return []
-
-    def load_exceptions_for_date_raw(self, check_date):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-            
-            date_str = check_date.strftime('%Y-%m-%d') if isinstance(check_date, date) else str(check_date)
-            
-            sql = f"""
-                SELECT id, exception_type, start_time, end_time, notes
-                FROM [IST-PGE].dbo.Calendar_Exceptions
-                WHERE exception_date = '{date_str}'
-                AND is_available = 0
-                AND id_sector = {self.id_sector}
-            """
-            rs.Open(sql, conn)
-            
-            exceptions = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    start_t = rs.Fields('start_time').Value
-                    end_t = rs.Fields('end_time').Value
-                    exceptions.append({
-                        'id': rs.Fields('id').Value,
-                        'exception_type': rs.Fields('exception_type').Value,
-                        'start_time': str(start_t)[:5] if start_t else None,
-                        'end_time': str(end_t)[:5] if end_t else None,
-                        'notes': rs.Fields('notes').Value if rs.Fields('notes').Value else ""
-                    })
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            return exceptions
-        except Exception as e:
-            print(f"Error loading exceptions: {e}")
-            return []
-
-    def _get_exceptions(self):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-            
-            sql = f"""
-                SELECT exception_date, exception_type, start_time, end_time, is_available
-                FROM [IST-PGE].dbo.Calendar_Exceptions
-                WHERE id_sector = {self.id_sector}
-            """
-            rs.Open(sql, conn)
-            
-            result = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    exc_date = rs.Fields('exception_date').Value
-                    if isinstance(exc_date, str):
-                        exc_date = datetime.strptime(exc_date, '%Y-%m-%d').date()
-                    elif isinstance(exc_date, datetime):
-                        exc_date = exc_date.date()
-                    
-                    start_t = rs.Fields('start_time').Value
-                    end_t = rs.Fields('end_time').Value
-                    
-                    if start_t and isinstance(start_t, str):
-                        parts = start_t.split(':')
-                        start_t = time(int(parts[0]), int(parts[1]))
-                    if end_t and isinstance(end_t, str):
-                        parts = end_t.split(':')
-                        end_t = time(int(parts[0]), int(parts[1]))
-                    
-                    result.append({
-                        'exception_date': exc_date,
-                        'exception_type': rs.Fields('exception_type').Value,
-                        'start_time': start_t,
-                        'end_time': end_t,
-                        'is_available': rs.Fields('is_available').Value
-                    })
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            return result
-        except Exception as e:
-            print(f"Error loading exceptions: {e}")
-            return []
-
-    def load_calendar_data(self):
-        self.calendar_data.clear()
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            
-            sql = f"""
-                SELECT 
-                    ts.slot_date, 
-                    ts.start_time, 
-                    ts.end_time,
-                    s.code, 
-                    s.specification, 
-                    s.description,
-                    s.execution_time_minutes,
-                    s.procedure_name,
-                    s.procedure_url,
-                    ss.notes, 
-                    ss.status,
-                    ss.priority, 
-                    ss.id as schedule_id
-
-                FROM [IST-PGE].dbo.Time_Slots ts
-                JOIN [IST-PGE].dbo.Service_Schedule ss ON ts.schedule_id = ss.id
-                JOIN [IST-PGE].dbo.Service_Modes_Local s ON ts.service_id = s.id
-                WHERE ts.id_sector = {self.id_sector}
-                ORDER BY ts.slot_date, ts.start_time
-            """
-            
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            rs.Open(sql, conn)
-            
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    slot_date = rs.Fields('slot_date').Value
-                    if isinstance(slot_date, str):
-                        slot_date = datetime.strptime(slot_date, '%Y-%m-%d').date()
-                    elif isinstance(slot_date, datetime):
-                        slot_date = slot_date.date()
-                    
-                    calendar_key = (slot_date.day, slot_date.month, slot_date.year)
-                    
-                    
-                    procedure_name = rs.Fields('procedure_name').Value if len(str(rs.Fields('procedure_name').Value)) != None else '(vazio)'
-
-                    order_data = {
-                        'start_time': rs.Fields('start_time').Value,
-                        'end_time': rs.Fields('end_time').Value,
-                        'code': rs.Fields('code').Value,
-                        'specification': rs.Fields('specification').Value,
-                        'description': rs.Fields('description').Value,
-                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
-                        'procedure_name': procedure_name,
-                        'procedure_url': rs.Fields('procedure_url').Value,
-                        'notes': rs.Fields('notes').Value,
-                        'status': rs.Fields('status').Value,
-                        'priority': rs.Fields('priority').Value,
-                        'schedule_id': rs.Fields('schedule_id').Value
-                    }
-                    
-                    if calendar_key not in self.calendar_data:
-                        self.calendar_data[calendar_key] = []
-                    self.calendar_data[calendar_key].append(order_data)
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-        except Exception as e:
-            print(f"Error loading calendar data: {e}")
-
-    def render_calendar(self):
-        for widget in self.calendar_frame.winfo_children():
-            widget.destroy()
-        
-        today = datetime.now()
-        target_date = today + relativedelta(months=self.current_month_offset)
-        target_date = target_date.replace(day=1)
-        year, month = target_date.year, target_date.month
-        
-        meses_pt = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho','Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-        
-        # Preload exceptions
-        exceptions_by_date = {}
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-            
-            first_day = f"{year}-{month:02d}-01"
-            if month == 12:
-                last_day = f"{year+1}-01-01"
-            else:
-                last_day = f"{year}-{month+1:02d}-01"
-            
-            sql = f"""
-                SELECT exception_date, exception_type, start_time, end_time, notes, is_available
-                FROM [IST-PGE].dbo.Calendar_Exceptions
-                WHERE exception_date >= '{first_day}'
-                AND exception_date < '{last_day}'
-                AND id_sector = {self.id_sector}
-            """
-            rs.Open(sql, conn)
-            
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    exc_date = rs.Fields('exception_date').Value
-                    if isinstance(exc_date, str):
-                        exc_date = datetime.strptime(exc_date, '%Y-%m-%d').date()
-                    elif isinstance(exc_date, datetime):
-                        exc_date = exc_date.date()
-                    
-                    exc_key = (exc_date.day, exc_date.month, exc_date.year)
-                    
-                    start_t = rs.Fields('start_time').Value
-                    end_t = rs.Fields('end_time').Value
-                    is_avail = rs.Fields('is_available').Value
-                    notes = rs.Fields('notes').Value if rs.Fields('notes').Value else ""
-                    
-                    if exc_key not in exceptions_by_date:
-                        exceptions_by_date[exc_key] = []
-                    
-                    exceptions_by_date[exc_key].append({
-                        'start_time': str(start_t)[:5] if start_t else None,
-                        'end_time': str(end_t)[:5] if end_t else None,
-                        'is_available': is_avail,
-                        'notes': notes
-                    })
-                    rs.MoveNext()
-            rs.Close()
-            conn.Close()
-        except Exception as e:
-            print(f"Error loading exceptions: {e}")
-        
-        # Navigation Header
-        nav_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
-        nav_frame.pack(fill='x', pady=(0, 5))
-        
-        self.greetings = ttk.Label(nav_frame, text=f"{buenas}", font=("Segoe UI", 10), background='black')
-        self.greetings.pack(side="left", padx=5, pady=(0, 0))
-        
-        nav_row = tk.Frame(nav_frame, bg=self.cor_fundo)
-        nav_row.pack(fill='x')
-
-        nav_row2 = tk.Frame(nav_frame, bg=self.cor_fundo)
-        nav_row2.pack(fill='x')
-        
-        lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
-        #lab_label = tk.Label(nav_row2, text=f"Calendário de Serviços - Laboratório de {self.lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',anchor='w')
-        lab_label.pack(side='left', padx=5)
-
-        btn_prev = tk.Label(nav_row, text="◀", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
-        btn_prev.pack(side='left', padx=5)
-        btn_prev.bind('<Button-1>', lambda e: self.change_month(-1))
-
-        month_label = tk.Label(nav_row, text=f"{meses_pt[month-1]} {year}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white')
-        month_label.pack(side='left', padx=5)
-
-        btn_next = tk.Label(nav_row, text="▶", anchor='center', justify='center',font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white',cursor='hand2', padx=0)
-        btn_next.pack(side='left', padx=5)
-        btn_next.bind('<Button-1>', lambda e: self.change_month(1))
-
-
-
-        header_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
-        header_frame.pack(fill='x')
-        
-        dias_semana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
-        for dia in dias_semana:
-            lbl = tk.Label(header_frame, text=dia, font=('Segoe UI', 9, 'bold'),bg='#1B4B9F', fg='white', width=16, pady=4)
-            lbl.pack(side='left', padx=1, pady=1)
-        
-        # Calendar Grid
-        grid_frame = tk.Frame(self.calendar_frame, bg=self.cor_fundo)
-        grid_frame.pack(fill='both', expand=True)
-        
-        cal_matrix = cal.monthcalendar(year, month)
-        today_date = today.date()
-        
-        for week in cal_matrix:
-            week_frame = tk.Frame(grid_frame, bg=self.cor_fundo)
-            week_frame.pack(fill='x')
-            
-            for day in week:
-                if day == 0:
-                    day_frame = tk.Frame(week_frame, bg='#908F8F', width=120, height=80)
-                    day_frame.pack(side='left', padx=1, pady=1)
-                    day_frame.pack_propagate(False)
-                else:
-                    current_date = datetime(year, month, day).date()
-                    calendar_key = (day, month, year)
-                    
-                    is_today = (current_date == today_date)
-                    is_weekend = current_date.weekday() >= 5
-                    has_orders = calendar_key in self.calendar_data
-                    has_exceptions = calendar_key in exceptions_by_date
-                    
-                    if is_today:
-                        bg_color = '#B7D5F5'
-                    elif is_weekend:
-                        bg_color = "#908F8F"
-                    elif has_orders:
-                        bg_color = '#FFFFFF'
-                    else:
-                        bg_color = '#908F8F'
-                    
-                    is_clickable = not is_weekend
-                    
-                    if is_clickable:
-                        day_frame = tk.Frame(week_frame, bg=bg_color, width=120, height=80, bd=1, cursor='hand2')
-                    else:
-                        day_frame = tk.Frame(week_frame, bg=bg_color, width=120, height=80, bd=1)
-                    
-                    day_frame.pack(side='left', padx=1, pady=1)
-                    day_frame.pack_propagate(False)
-                    
-                    day_num_frame = tk.Frame(day_frame, bg=bg_color)
-                    day_num_frame.pack(fill='x', padx=2, pady=1)
-                    
-                    fg_day = 'white' if is_today else 'black'
-                    day_label = tk.Label(day_num_frame, text=str(day), font=('Segoe UI', 9, 'bold'),bg=bg_color, fg=fg_day, anchor='w')
-                    day_label.pack(side='left')
-                    
-                    if has_orders:
-                        count = len(self.calendar_data[calendar_key])
-                        badge = tk.Label(day_num_frame, text=str(count), font=('Segoe UI', 8, 'bold'),bg='#2462D2', fg='white', width=3, height=1)
-                        badge.pack(side='right')
-                    
-                    if has_exceptions:
-                        exc_list = exceptions_by_date[calendar_key]
-                        has_real_exception = any('intervalinho' not in str(exc.get('notes', '')).lower() for exc in exc_list)
-                        if has_real_exception:
-                            exc_indicator = tk.Label(day_num_frame, text="⚠", font=('Segoe UI', 8),bg=bg_color, fg="#E64848")
-                            exc_indicator.pack(side='right', padx=(0, 2))
-
-                    if has_orders:
-                        unique_items = []
-                        seen = set()
-                        for order in self.calendar_data[calendar_key]:
-                            result = self.extract_item_from_notes(order.get('notes', ''))
-                            if isinstance(result, tuple) and len(result) >= 2:
-                                item_code = result[0]
-                            else:
-                                item_code = str(result)[:15] if result else ""
-                            
-                            if item_code and item_code not in seen:
-                                unique_items.append(item_code)
-                                seen.add(item_code)
-                        
-                        preview_text = "\n".join(unique_items[:3])
-                        preview = tk.Label(day_frame, text=preview_text, font=('Segoe UI', 7), bg=bg_color,fg='#333333', anchor='w', justify='left', cursor='hand2')
-                        preview.pack(fill='x', padx=3)
-
-                        if len(unique_items) > 3:
-                            more_label = tk.Label(day_frame, text=f"+{len(unique_items) - 3} mais...",font=('Segoe UI', 6), bg=bg_color, fg="#4A4949", anchor='w')
-                            more_label.pack(fill='x', padx=3)
-                    
-                    if is_clickable:
-                        day_frame.bind('<Button-1>', lambda e, key=calendar_key: self.show_day_orders(key))
-                        day_frame.bind('<Button-3>', lambda e, key=calendar_key: self.show_day_context_menu(e, key))
-                        for child in day_frame.winfo_children():
-                            child.bind('<Button-1>', lambda e, key=calendar_key: self.show_day_orders(key))
-                            child.bind('<Button-3>', lambda e, key=calendar_key: self.show_day_context_menu(e, key))
-        
-        btn_today = ttk.Button(grid_frame, text="Hoje", command=self.go_to_today, cursor='hand2')
-        btn_today.pack(side="left", padx=5)
-        
-        btn_refresh = ttk.Button(grid_frame, text="Atualizar", command=self.refresh_calendar, cursor='hand2')
-        btn_refresh.pack(side="left", padx=5)
-        
-        if bool_agenda == 1:
-            self.buscar = ttk.Button(grid_frame, text=" Limpar agenda ", command=self.clear_all_scheduled, cursor='hand2')
-            self.buscar.pack(side="left", padx=5)
-
-    def show_day_context_menu(self, event, calendar_key):
-        context_menu = tk.Menu(self.calendar_frame, tearoff=0)
-        
-        count = len(self.calendar_data.get(calendar_key, []))
-        
-        if count == 1:
-            context_menu.add_command(label=f"Ver serviço", command=lambda k=calendar_key: self.show_day_orders(k))
-            context_menu.add_separator()
-        elif count > 1:
-            context_menu.add_command(label=f"Ver serviços", command=lambda k=calendar_key: self.show_day_orders(k))
-            context_menu.add_separator()
-        
-        context_menu.add_command(label=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat)
-        
-        exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-        exceptions = self.load_exceptions_for_date(exc_date)
-        
-        if exceptions:
-            context_menu.add_separator()
-            if len(exceptions) == 1:
-                context_menu.add_command(label=f"Remover bloqueio de agenda deste dia", command=lambda k=calendar_key: self.remove_day_exceptions(k))
-            if len(exceptions) > 1:
-                context_menu.add_command(label=f"Remover bloqueios de agenda deste dia", command=lambda k=calendar_key: self.remove_day_exceptions(k))
-        
-        if count == 1:
-            
-            context_menu.add_separator()
-            context_menu.add_command(label=f"Reagendar o serviço para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
-            context_menu.add_command(label=f"Reagendar o serviço automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
-        elif count > 1:
-            
-            context_menu.add_separator()
-            context_menu.add_command(label=f"Reagendar todos os serviços para um dia específico...", command=lambda k=calendar_key: self.reschedule_day_services_manual(k))
-            context_menu.add_command(label=f"Reagendar todos os serviços automaticamente", command=lambda k=calendar_key: self.reschedule_day_services(k))
-        
-        context_menu.post(event.x_root, event.y_root)
-
-    # ===== SCHEDULING ENGINE =====
-    def find_next_available_slot(self, from_time, duration_minutes):
-        check_date = from_time.date()
-        max_days = 365
-        
-        availability = self._get_availability()
-        exceptions = self._get_exceptions()
-        
-        for _ in range(max_days):
-            sql_day_of_week = (check_date.weekday() + 1) % 7
-            day_windows = [w for w in availability if w['day_of_week'] == sql_day_of_week]
-            
-            if not day_windows:
-                check_date += timedelta(days=1)
-                from_time = datetime.combine(check_date, time(8, 0))
-                continue
-            
-            full_day_blocked = any(
-                ex['exception_date'] == check_date and ex['is_available'] == False and ex['start_time'] is None
-                for ex in exceptions
-            )
-            
-            if full_day_blocked:
-                check_date += timedelta(days=1)
-                from_time = datetime.combine(check_date, time(8, 0))
-                continue
-            
-            for window in sorted(day_windows, key=lambda w: w['start_time']):
-                window_start_dt = datetime.combine(check_date, window['start_time'])
-                window_end_dt = datetime.combine(check_date, window['end_time'])
-                proposed_start = max(from_time, window_start_dt)
-                
-                while proposed_start + timedelta(minutes=duration_minutes) <= window_end_dt:
-                    proposed_end = proposed_start + timedelta(minutes=duration_minutes)
-                    
-                    blocked_by_exception = False
-                    for ex in exceptions:
-                        if (ex['exception_date'] == check_date and ex['is_available'] == False
-                            and ex['start_time'] is not None and ex['end_time'] is not None):
-                            ex_start_dt = datetime.combine(check_date, ex['start_time'])
-                            ex_end_dt = datetime.combine(check_date, ex['end_time'])
-                            if proposed_start < ex_end_dt and proposed_end > ex_start_dt:
-                                blocked_by_exception = True
-                                proposed_start = ex_end_dt
-                                break
-                    
-                    if blocked_by_exception:
-                        continue
-                    
-                    if self._has_time_slot_conflict(check_date, proposed_start.time(), proposed_end.time()):
-                        next_free = self._get_next_free_time(check_date, proposed_start.time())
-                        if next_free is None:
-                            break
-                        proposed_start = datetime.combine(check_date, next_free)
-                        continue
-                    
-                    return proposed_start, proposed_end
-            
-            check_date += timedelta(days=1)
-            if day_windows:
-                earliest = min(w['start_time'] for w in day_windows)
-                from_time = datetime.combine(check_date, earliest)
-            else:
-                from_time = datetime.combine(check_date, time(8, 0))
-        
-        return None, None
-
-    def _get_availability(self):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-            
-            sql = """
-                SELECT day_of_week, start_time, end_time
-                FROM [IST-PGE].dbo.Calendar_Availability
-                WHERE is_active = 1
-                ORDER BY day_of_week, start_time
-            """
-            rs.Open(sql, conn)
-            
-            result = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    start_t = rs.Fields('start_time').Value
-                    end_t = rs.Fields('end_time').Value
-                    if isinstance(start_t, str):
-                        parts = start_t.split(':')
-                        start_t = time(int(parts[0]), int(parts[1]))
-                    if isinstance(end_t, str):
-                        parts = end_t.split(':')
-                        end_t = time(int(parts[0]), int(parts[1]))
-                    
-                    result.append({
-                        'day_of_week': rs.Fields('day_of_week').Value,
-                        'start_time': start_t,
-                        'end_time': end_t
-                    })
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            return result
-        except Exception as e:
-            print(f"Error loading availability: {e}")
-            return []
-
-    def _has_time_slot_conflict(self, check_date, start_time, end_time):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-            
-            start_str = start_time.strftime('%H:%M:%S') if isinstance(start_time, time) else str(start_time)
-            end_str = end_time.strftime('%H:%M:%S') if isinstance(end_time, time) else str(end_time)
-            date_str = check_date.strftime('%Y-%m-%d')
-            
-            sql = f"""
-                SELECT COUNT(*) as cnt
-                FROM [IST-PGE].dbo.Time_Slots
-                WHERE slot_date = '{date_str}'
-                AND start_time < '{end_str}'
-                AND end_time > '{start_str}'
-                AND id_sector = {self.id_sector}
-            """
-            rs.Open(sql, conn)
-            count = rs.Fields('cnt').Value if not rs.EOF else 0
-            rs.Close()
-            conn.Close()
-            return count > 0
-        except Exception as e:
-            print(f"Error checking conflicts: {e}")
-            return True
-
-    def _get_next_free_time(self, check_date, after_time):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-            
-            date_str = check_date.strftime('%Y-%m-%d')
-            time_str = after_time.strftime('%H:%M:%S') if isinstance(after_time, time) else str(after_time)
-            
-            sql = f"""
-                SELECT TOP 1 end_time
-                FROM [IST-PGE].dbo.Time_Slots
-                WHERE slot_date = '{date_str}'
-                AND start_time <= '{time_str}'
-                AND end_time > '{time_str}'
-                AND id_sector = {self.id_sector}
-                ORDER BY end_time ASC
-            """
-            rs.Open(sql, conn)
-            
-            if not rs.EOF:
-                end_time = rs.Fields('end_time').Value
-                result = self._parse_time_value(end_time)
-                rs.Close()
-                conn.Close()
-                return result
-            
-            rs.Close()
-            
-            sql2 = f"""
-                SELECT TOP 1 end_time
-                FROM [IST-PGE].dbo.Time_Slots
-                WHERE slot_date = '{date_str}'
-                AND start_time > '{time_str}'
-                AND id_sector = {self.id_sector}
-                ORDER BY start_time ASC
-            """
-            rs.Close()
-            rs.Open(sql2, conn)
-            
-            if not rs.EOF:
-                end_time = rs.Fields('end_time').Value
-                result = self._parse_time_value(end_time)
-                rs.Close()
-                conn.Close()
-                return result
-            
-            rs.Close()
-            conn.Close()
-            return None
-        except Exception as e:
-            print(f"Error getting next free time: {e}")
-            return None
-
-    def _parse_time_value(self, value):
-        if value is None:
-            return None
-        if isinstance(value, time):
-            return value
-        if isinstance(value, str):
-            value = value.split('.')[0]
-            if ':' in value:
-                parts = value.split(':')
-                return time(int(parts[0]), int(parts[1]), 0)
-            else:
-                return time(int(value), 0, 0)
-        if isinstance(value, float):
-            total_hours = value * 24
-            hours = int(total_hours)
-            minutes = int((total_hours - hours) * 60)
-            return time(hours, minutes, 0)
-        if isinstance(value, datetime):
-            return time(value.hour, value.minute, 0)
-        return None
-
-    def schedule_all_pending(self, from_date=None):
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            sql = f"""
-                SELECT ss.id as schedule_id, ss.service_id,
-                       s.execution_time_minutes, ss.priority
-                FROM [IST-PGE].dbo.Service_Schedule ss
-                JOIN [IST-PGE].dbo.Service_Modes_Local s ON ss.service_id = s.id
-                WHERE ss.status = 'PENDING' AND ss.id_sector = {self.id_sector}
-                ORDER BY ss.priority ASC, ss.requested_at ASC
-            """
-            rs.Open(sql, conn)
-            
-            pending_services = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    pending_services.append({
-                        'schedule_id': rs.Fields('schedule_id').Value,
-                        'service_id': rs.Fields('service_id').Value,
-                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
-                        'priority': rs.Fields('priority').Value
-                    })
-                    rs.MoveNext()
-            rs.Close()
-            
-            if len(pending_services) == 0:
-                conn.Close()
-                return None, None
-            
-            if from_date:
-                current_time = from_date if isinstance(from_date, datetime) else datetime.combine(from_date, time(8, 0))
-            else:
-                current_time = datetime.now()
-            
-            first_start = None
-            last_end = None
-            
-            for service in pending_services:
-                next_start, next_end = self.find_next_available_slot(current_time, service['execution_time_minutes'])
-                
-                if next_start is None:
-                    continue
-                
-                if first_start is None:
-                    first_start = next_start
-                last_end = next_end
-                
-                conn.Execute(f"""
-                    UPDATE [IST-PGE].dbo.Service_Schedule
-                    SET scheduled_start = '{next_start.strftime('%Y-%m-%d %H:%M:%S')}',
-                        scheduled_end = '{next_end.strftime('%Y-%m-%d %H:%M:%S')}',
-                        status = 'SCHEDULED', updated_at = GETDATE()
-                    WHERE id = {service['schedule_id']}
-                """)
-                
-                conn.Execute(f"""
-                    INSERT INTO [IST-PGE].dbo.Time_Slots (slot_date, start_time, end_time, schedule_id, service_id, id_sector)
-                    VALUES ('{next_start.strftime('%Y-%m-%d')}', '{next_start.strftime('%H:%M:%S')}',
-                            '{next_end.strftime('%H:%M:%S')}', {service['schedule_id']},
-                            {service['service_id']}, {self.id_sector})
-                """)
-                
-                current_time = next_end
-            
-            conn.Close()
-            
-            return first_start, last_end
-        except Exception as e:
-            print(f"Error in schedule_all_pending: {e}")
-            return None, None
-
-    # ===== RESCHEDULE METHODS =====
-    def reschedule_day_services(self, calendar_key):
-        if calendar_key not in self.calendar_data:
-            messagebox.showinfo("Aviso", "Nenhum serviço neste dia!")
-            return
-        
-        count = len(self.calendar_data[calendar_key])
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        confirm = messagebox.askyesno("Info agendamento", f"Deseja reagendar {'o serviço' if count == 1 else f'os {count} serviços'} do dia {date_str}?")
-        if not confirm:
-            return
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            
-            reschedule_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-            date_str_sql = reschedule_date.strftime('%Y-%m-%d')
-            
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            rs.Open(f"SELECT ts.schedule_id FROM [IST-PGE].dbo.Time_Slots ts WHERE ts.slot_date = '{date_str_sql}' AND ts.id_sector = {self.id_sector}", conn)
-            
-            schedule_ids = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    schedule_ids.append(rs.Fields('schedule_id').Value)
-                    rs.MoveNext()
-            rs.Close()
-            
-            if not schedule_ids:
-                conn.Close()
-                return
-            
-            conn.Execute(f"DELETE FROM [IST-PGE].dbo.Time_Slots WHERE slot_date = '{date_str_sql}' AND id_sector = {self.id_sector}")
-            
-            id_list = ','.join(str(sid) for sid in schedule_ids)
-            conn.Execute(f"""
-                UPDATE [IST-PGE].dbo.Service_Schedule
-                SET status = 'PENDING', scheduled_start = NULL, scheduled_end = NULL, updated_at = GETDATE()
-                WHERE id IN ({id_list})
-            """)
-            conn.Close()
-            
-            self.show_loading_screen(f"Agendamento de {len(schedule_ids)} {'itens' if len(schedule_ids) > 1 else 'item'} em Laboratório de {self.lab_name}")
-
-            self.next_start, self.next_end = self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
-            
-            self.refresh_calendar()
-            
-            self.hide_loading_screen()
-            
-            if count == 1:
-                msg = f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')} das {self.next_start.strftime('%H:%M')} às {self.next_end.strftime('%H:%M')}"
-            else:
-                msg = f"{count} serviços reagendados para a partir de {self.next_start.strftime('%d/%m/%Y')}"
-            self.status_label.config(text=msg)
-            messagebox.showinfo('Info agendamento', msg)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
-
-    def reschedule_day_services_manual(self, calendar_key):
-        if calendar_key not in self.calendar_data:
-            messagebox.showinfo("Aviso", "Nenhum serviço neste dia!")
-            return
-        
-        count = len(self.calendar_data[calendar_key])
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        confirm = messagebox.askyesno("Info agendamento", 
-            f"Deseja reagendar manualmente {'o serviço' if count == 1 else f'os {count} serviços'} do dia {date_str}?")
-        if not confirm:
-            return
-        
-        self._open_manual_reschedule_popup(calendar_key)
-
-    def _open_manual_reschedule_popup(self, calendar_key):
-        popup = tk.Toplevel(self.frame_certificados)
-        popup.geometry("380x280")
-        popup.configure(bg=self.cor_fundo)
-        popup.title("Reagendamento Manual")
-        
-        count = len(self.calendar_data[calendar_key])
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        
-        tk.Label(popup, text=f"Reagendar {count} {'serviço' if count == 1 else 'serviços'} de {date_str}",font=('Segoe UI', 10, 'bold'), bg=self.cor_fundo, fg='white').pack(pady=(15, 10))
-        
-        tk.Label(popup, text="Nova data (DD/MM/AAAA):", font=('Segoe UI', 9),
-                bg=self.cor_fundo, fg='white').pack(anchor='w', padx=30, pady=(10, 0))
-        
-        date_frame = tk.Frame(popup, bg=self.cor_fundo)
-        date_frame.pack(fill='x', padx=30, pady=(2, 5))
-        
-        tomorrow = datetime.now() + timedelta(days=1)
-        day_var = tk.StringVar(value=tomorrow.strftime('%d'))
-        month_var = tk.StringVar(value=tomorrow.strftime('%m'))
-        year_var = tk.StringVar(value=tomorrow.strftime('%Y'))
-        
-        ttk.Entry(date_frame, textvariable=day_var, width=3).pack(side='left')
-        tk.Label(date_frame, text="/", bg=self.cor_fundo, fg='white').pack(side='left')
-        ttk.Entry(date_frame, textvariable=month_var, width=3).pack(side='left')
-        tk.Label(date_frame, text="/", bg=self.cor_fundo, fg='white').pack(side='left')
-        ttk.Entry(date_frame, textvariable=year_var, width=5).pack(side='left')
-        
-        tk.Label(popup, text="Horário de início (HH:MM):", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white').pack(anchor='w', padx=30, pady=(10, 0))
-        
-        time_var = tk.StringVar(value="08:00")
-        ttk.Entry(popup, textvariable=time_var, width=10).pack(anchor='w', padx=30, pady=(2, 5))
-        
-        tk.Label(popup, text="⚠ Os serviços serão agendados em sequência\n   a partir desta data e horário.",font=('Segoe UI', 8), bg=self.cor_fundo, fg='#FFD700').pack(pady=(10, 5))
-        
-        btn_frame = tk.Frame(popup, bg=self.cor_fundo)
-        btn_frame.pack(pady=15)
-        ttk.Button(btn_frame, text=" Confirmar Reagendamento ",command=lambda: self._execute_manual_reschedule(calendar_key, popup, day_var, month_var, year_var, time_var)).pack(side='left', padx=5)
-        ttk.Button(btn_frame, text=" Cancelar ", command=popup.destroy).pack(side='left', padx=5)
-
-    def _execute_manual_reschedule(self, calendar_key, popup, day_var, month_var, year_var, time_var):
-        try:
-
-            day = day_var.get().strip().zfill(2)
-            month = month_var.get().strip().zfill(2)
-            year = year_var.get().strip()
-            new_date = datetime.strptime(f"{year}-{month}-{day}", '%Y-%m-%d').date()
-            
-            time_str = time_var.get().strip()
-            parts = time_str.split(':')
-
-            if len(parts) != 2:
-                messagebox.showwarning("Aviso", "Formato de horário inválido!")
-                return
-            new_time = time(int(parts[0]), int(parts[1]))
-            new_datetime = datetime.combine(new_date, new_time)
-            
-            reschedule_date_orig = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-            if new_date == reschedule_date_orig:
-                messagebox.showwarning("Aviso", f"A nova data deve ser diferente da data do agendamento ({reschedule_date_orig.strftime('%d/%m/%Y')})!")
-                return
-            #if new_date <= reschedule_date_orig:
-            #    messagebox.showwarning("Aviso", f"A nova data deve ser posterior a {reschedule_date_orig.strftime('%d/%m/%Y')}!")
-            #    return
-            
-            popup.destroy()
-            
-            count = len(self.calendar_data[calendar_key])
-            
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            
-            reschedule_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-            date_str_sql = reschedule_date.strftime('%Y-%m-%d')
-            
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            rs.Open(f"SELECT ts.schedule_id FROM [IST-PGE].dbo.Time_Slots ts WHERE ts.slot_date = '{date_str_sql}' AND ts.id_sector = {self.id_sector}", conn)
-            
-            schedule_ids = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    schedule_ids.append(rs.Fields('schedule_id').Value)
-                    rs.MoveNext()
-            rs.Close()
-            
-            if not schedule_ids:
-                conn.Close()
-                return
-            
-            conn.Execute(f"DELETE FROM [IST-PGE].dbo.Time_Slots WHERE slot_date = '{date_str_sql}' AND id_sector = {self.id_sector}")
-            
-            id_list = ','.join(str(sid) for sid in schedule_ids)
-            conn.Execute(f"UPDATE [IST-PGE].dbo.Service_Schedule SET status = 'PENDING', scheduled_start = NULL, scheduled_end = NULL, updated_at = GETDATE() WHERE id IN ({id_list})")
-            conn.Close()
-            
-            self.show_loading_screen(f"Agendando {len(schedule_ids)} {'itens' if len(schedule_ids) > 1 else 'item'} em Laboratório de {self.lab_name}")
-
-            self.next_start, self.next_end = self.schedule_all_pending(from_date=new_datetime)
-            
-            self.refresh_calendar()
-            self.hide_loading_screen()
-            
-            new_date_br = new_date.strftime('%d/%m/%Y')
-            messagebox.showinfo('Info agendamento', f"{'Serviços reagendados' if len(schedule_ids) > 1 else 'Serviço reagendado'} para {new_date_br} a partir das {new_time.strftime('%H:%M')}")
-        except ValueError:
-            messagebox.showwarning("Aviso", "Data ou horário inválido!")
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
-
-    # ===== DAY ORDERS POPUP =====
-    def show_day_orders(self, calendar_key):
-        popup = tk.Toplevel(self.frame_certificados)
-        popup.geometry("850x400")
-        popup.minsize(800, 400)
-        popup.configure(bg=self.cor_fundo)
-        popup.calendar_key = calendar_key
-
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        popup.title(f"Serviços - {date_str} (Laboratório de {self.lab_name})")
-        
-        orders = self.calendar_data.get(calendar_key, [])
-        popup.schedule_ids = [o.get('schedule_id') for o in orders]
-        has_orders = len(orders) > 0
-        
-        if has_orders:
-            tree_frame = ttk.Frame(popup)
-            tree_frame.pack(pady=10, padx=10, expand=True, fill='both')
-            
-            tree_scroll = ttk.Scrollbar(tree_frame)
-            tree_scroll.pack(side='right', fill='y')
-            
-            columns = ("Horário", "OS", "Item", "Serviço", "Descrição", "Duração", "Código")
-            tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, selectmode="extended")
-            tree_scroll.config(command=tree.yview)
-            
-            for col, width in [("Horário", 100), ("OS", 80), ("Item", 70), ("Serviço", 150), ("Descrição", 150), ("Duração", 55), ("Código", 70)]:
-                tree.heading(col, text=col)
-                tree.column(col, width=width)
-            
-            tree.pack(expand=True, fill='both')
-            tree.tag_configure('urgente', background='#FFD9D9')
-            tree.tag_configure('normal', background='#FFFFFF')
-            
-            for order in orders:
-                start_str = str(order['start_time'])[:5] if order['start_time'] else "--:--"
-                end_str = str(order['end_time'])[:5] if order['end_time'] else "--:--"
-                code = self.extract_code_from_notes(order.get('notes', ''))
-                os_code = self.extract_os_from_notes(order.get('notes', ''))
-                
-                is_urgent = order.get('priority', 10) <= 5
-                tag = 'urgente' if is_urgent else 'normal'
-                
-                tree.insert("", "end", values=(
-                    f"{start_str} - {end_str}", 
-                    os_code, 
-                    code,
-                    order['specification'], 
-                    order['description'],
-                    f"{order['execution_time_minutes']} min", 
-                    order['code']
-                ), tags=(tag,))
-        else:
-            tree = None
-            msg_frame = tk.Frame(popup, bg=self.cor_fundo)
-            msg_frame.pack(expand=True)
-            tk.Label(msg_frame, text="Nenhum serviço agendado para este dia", font=('Segoe UI', 11), bg=self.cor_fundo, fg='#B7D5F5').pack()
-        
-        # Exceptions
-        exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-        exceptions_raw = self.load_exceptions_for_date_raw(exc_date)
-        
-        if exceptions_raw:
-            exc_frame = tk.Frame(popup, bg=self.cor_fundo)
-            exc_frame.pack(fill='x', padx=10, pady=(0, 5))
-            tk.Label(exc_frame, text="Bloqueios de Agenda:", font=('Segoe UI', 9, 'bold'), bg=self.cor_fundo, fg='#FFD700').pack(anchor='w')
-            
-            for i, exc in enumerate(exceptions_raw):
-                exc_text = self._format_exception_text(exc)
-                lbl = tk.Label(exc_frame, text=f"  ⛔ {exc_text}", font=('Segoe UI', 8), bg=self.cor_fundo, fg='#FF9999', cursor='hand2')
-                lbl.pack(anchor='w')
-                lbl.bind('<Button-3>', lambda e, idx=i: self._show_exception_context_menu(e, exc_frame, idx, exc_date, exceptions_raw, popup))
-                
-                lbl.bind('<Enter>', lambda e, l=lbl: l.configure(bg='#3A3A5C'))
-                lbl.bind('<Leave>', lambda e, l=lbl: l.configure(bg=self.cor_fundo))
-        
-        btn_frame = tk.Frame(popup, bg=self.cor_fundo)
-        btn_frame.pack(fill='x', padx=10, pady=(5, 10))
-        ttk.Button(btn_frame, text=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat, cursor='hand2').pack(side='left', padx=5)
-        
-        if tree:
-            tree.bind('<Button-3>', lambda e, t=tree: self.show_popup_context_menu(e, t))
-
-    def _format_exception_text(self, exc):
-        if exc['start_time'] and exc['end_time']:
-            return f"{exc['start_time']}-{exc['end_time']}: {exc['notes']}"
-        return f"Dia inteiro: {exc['notes']}"
-
-    def _show_exception_context_menu(self, event, parent_frame, exc_index, exc_date, exceptions_raw, popup):
-        exc = exceptions_raw[exc_index]
-        if 'intervalinho' in str(exc.get('notes', '')).lower():
-            return
-        
-        context_menu = tk.Menu(parent_frame, tearoff=0)
-        exc_text = self._format_exception_text(exc)
-        context_menu.add_command(label=f"Remover bloqueio '{exc_text[:50]}'", command=lambda: self._remove_single_exception(exc['id'], exc_date, popup))
-        context_menu.post(event.x_root, event.y_root)
-
-    def _remove_single_exception(self, exception_id, exc_date, popup):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            conn.Execute(f"DELETE FROM [IST-PGE].dbo.Calendar_Exceptions WHERE id = {exception_id}")
-            conn.Close()
-            
-            self.refresh_calendar()
-            
-            if popup and popup.winfo_exists():
-                calendar_key = getattr(popup, 'calendar_key', None)
-                if calendar_key:
-                    for widget in popup.winfo_children():
-                        widget.destroy()
-                    self._refresh_popup_content(popup, calendar_key)
-            
-            self.status_label.config(text="Bloqueio de agenda removido com sucesso!")
-            messagebox.showinfo('Info agendamento', 'Bloqueio de agenda removido com sucesso!')
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao remover bloqueio:\n{str(e)}")
-
-    def _refresh_popup_content(self, popup, calendar_key):
-        popup.calendar_key = calendar_key
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        popup.title(f"Serviços - {date_str} ({self.lab_name})")
-        
-        orders = self.calendar_data.get(calendar_key, [])
-        popup.schedule_ids = [o.get('schedule_id') for o in orders]
-        has_orders = len(orders) > 0
-        
-        if has_orders:
-            tree_frame = ttk.Frame(popup)
-            tree_frame.pack(pady=10, padx=10, expand=True, fill='both')
-            tree_scroll = ttk.Scrollbar(tree_frame)
-            tree_scroll.pack(side='right', fill='y')
-            
-            columns = ("Horário", "OS", "Item", "Serviço", "Descrição", "Duração", "Código")
-            tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, selectmode="extended")
-            tree_scroll.config(command=tree.yview)
-            
-            for col, width in [("Horário", 100), ("OS", 80), ("Item", 70), ("Serviço", 150), ("Descrição", 150), ("Duração", 55), ("Código", 70)]:
-                tree.heading(col, text=col)
-                tree.column(col, width=width)
-            tree.pack(expand=True, fill='both')
-            tree.tag_configure('urgente', background='#FFD9D9')
-            tree.tag_configure('normal', background='#FFFFFF')
-            
-            for order in orders:
-                start_str = str(order['start_time'])[:5] if order['start_time'] else "--:--"
-                end_str = str(order['end_time'])[:5] if order['end_time'] else "--:--"
-                code = self.extract_code_from_notes(order.get('notes', ''))
-                os_code = self.extract_os_from_notes(order.get('notes', ''))
-                tag = 'urgente' if order.get('priority', 10) <= 5 else 'normal'
-
-                tree.insert("", 
-                            "end", 
-                            values=(f"{start_str} - {end_str}", 
-                                    os_code, 
-                                    code, 
-                                    order['specification'], 
-                                    order['description'], 
-                                    f"{order['execution_time_minutes']} min", 
-                                    order['code']), 
-                                    tags=(tag,))
-        
-        exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-        exceptions_raw = self.load_exceptions_for_date_raw(exc_date)
-        
-        if exceptions_raw:
-            exc_frame = tk.Frame(popup, bg=self.cor_fundo)
-            exc_frame.pack(fill='x', padx=10, pady=(0, 5))
-            tk.Label(exc_frame, text="Bloqueios de Agenda:", font=('Segoe UI', 9, 'bold'), bg=self.cor_fundo, fg='#FFD700').pack(anchor='w')
-            for i, exc in enumerate(exceptions_raw):
-                exc_text = self._format_exception_text(exc)
-                lbl = tk.Label(exc_frame, text=f"  ⛔ {exc_text}", font=('Segoe UI', 8), bg=self.cor_fundo, fg='#FF9999', cursor='hand2')
-                lbl.pack(anchor='w')
-                lbl.bind('<Button-3>', lambda e, idx=i: self._show_exception_context_menu(e, exc_frame, idx, exc_date, exceptions_raw, popup))
-                lbl.bind('<Enter>', lambda e, l=lbl: l.configure(bg='#3A3A5C'))
-                lbl.bind('<Leave>', lambda e, l=lbl: l.configure(bg=self.cor_fundo))
-        
-        btn_frame = tk.Frame(popup, bg=self.cor_fundo)
-        btn_frame.pack(fill='x', padx=10, pady=(5, 10))
-        ttk.Button(btn_frame, text=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat, cursor='hand2').pack(side='left', padx=5)
-        
-        if has_orders:
-            tree.bind('<Button-3>', lambda e, t=tree: self.show_popup_context_menu(e, t))
-
-    def show_popup_context_menu(self, event, tree):
-        selected = tree.selection()
-        if not selected:
-            return
-        
-        popup = tree.winfo_toplevel()
-        calendar_key = getattr(popup, 'calendar_key', None)
-        total_count = len(self.calendar_data.get(calendar_key, []))
-        selected_count = len(selected)
-        
-        context_menu = tk.Menu(tree, tearoff=0)
-        values = tree.item(selected[0])['values']
-        os_code = values[1] if len(values) > 1 else ""
-        
-                # NEW: View details of selected service
-        if selected_count == 1:
-            context_menu.add_command(label="Visualizar o serviço selecionado [Em desenvolvimento]",command=lambda t=tree: self.show_service_details(t))
-        else:
-            context_menu.add_command(label=f"Visualizar os {selected_count} serviços selecionados [Em desenvolvimento]",command=lambda t=tree: self.show_service_details(t))
-        
-        context_menu.add_separator()
-        context_menu.add_command(label=f"Iniciar chat do Teams com {self.lab_name}", command=self.open_teams_chat)        
-
-        if os_code:
-            sharepoint_url = self.get_sharepoint_url(os_code)
-            if sharepoint_url:
-                context_menu.add_command(label="Abrir link do SharePoint", command=lambda u=sharepoint_url: webbrowser.open(u))
-                #context_menu.add_command(label="Copiar link do SharePoint", command=lambda u=sharepoint_url: self.copy_to_clipboard(u) if hasattr(self, 'copy_to_clipboard') else None)
-
-        context_menu.add_command(label="Abrir diretório da planilha de cálculo", command=lambda: self.open_teams_link_planilha(None))
-        
-        if calendar_key and total_count > 0:
-            context_menu.add_separator()
-            if selected_count == 1:
-                context_menu.add_command(label="Reagendar o serviço selecionado automaticamente",                                   command=lambda t=tree, s=selected: self.reschedule_selected_services(t, s))
-                context_menu.add_command(label="Reagendar o serviço selecionado para um dia específico...",                         command=lambda t=tree, s=selected: self.reschedule_selected_services_manual(t, s))
-            else:
-                context_menu.add_command(label=f"Reagendar {selected_count} serviços selecionados automaticamente",                 command=lambda t=tree, s=selected: self.reschedule_selected_services(t, s))
-                context_menu.add_command(label=f"Reagendar {selected_count} serviços selecionados para um dia específico...",       command=lambda t=tree, s=selected: self.reschedule_selected_services_manual(t, s))
-                
-        context_menu.post(event.x_root, event.y_root)
-
-    def show_service_details(self, tree):
-        """Show detailed view of selected service(s)"""
-        selected = tree.selection()
-        if not selected:
-            return
-        
-        detail_window = tk.Toplevel(self.frame_certificados)
-        detail_window.title(f"Detalhes {'do serviço' if len(selected)==1 else 'dos serviços'}")
-        detail_window.geometry("700x450")
-        detail_window.configure(bg=self.cor_fundo)
-        #detail_window.attributes('-topmost', True)
-        detail_window.transient(self.frame_certificados)
-        text_frame = ttk.Frame(detail_window)
-        text_frame.pack(pady=10, padx=10, expand=True, fill="both")
-        
-        text_widget = tk.Text(text_frame, wrap="word", font=("Consolas", 10), bg='white', fg='black')
-        scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=text_widget.yview)
-        text_widget.configure(yscrollcommand=scrollbar.set)
-        
-        scrollbar.pack(side="right", fill="y")
-        text_widget.pack(side="left", expand=True, fill="both")
-        
-        output_text = f"{'='*70}\n"
-        output_text += f"Total de itens selecionados: {len(selected)}\n"
-        #output_text += f"Laboratório de {self.lab_name}\n"
-        output_text += f"{'='*70}\n\n"
-        
-        for i, item_id in enumerate(selected, 1):
-            values = tree.item(item_id)['values']
-            
-            os_code = values[1]
-            if os_code:
-                sharepoint_url = self.get_sharepoint_url(os_code)
-                output_text += f"{sharepoint_url}\n" #SHAREPOINT
-                
-            output_text += f"{values[1]}\n" #OS
-
-            output_text += f"\n" #CERTIFICADO
-            output_text += f"\n" #TAG
-            output_text += f"\n" #DATA CALIBRAÇÃO
-            
-            #output_text += f"Horário:    {values[0]}\n"
-            #output_text += f"Item:       {values[2]}\n"
-            #output_text += f"Serviço:    {values[3]}\n"
-            #output_text += f"Descrição:  {values[4]}\n"
-            #output_text += f"Duração:    {values[5]}\n"
-            #output_text += f"Código:     {values[6]}\n"
-            
-            #SHAREPOINT, OS, CERTIFICADO, TAG, DATA CALIBRAÇÃO, CLIENTE, ENDEREÇO, CONTATO
-
-
-
-            output_text += f"\n{'-'*40}\n\n"
-        
-        text_widget.insert("1.0", output_text)
-        text_widget.config(state="disabled")
-        
-        # Close button
-        ttk.Button(detail_window, text="Fechar", command=detail_window.destroy).pack(pady=(0, 10))
-
-    def reschedule_selected_services(self, tree, selected_items):
-        popup = tree.winfo_toplevel()
-        calendar_key = getattr(popup, 'calendar_key', None)
-        if not calendar_key:
-            return
-        
-        all_items = tree.get_children()
-        selected_indices = [all_items.index(item) for item in selected_items]
-        schedule_ids = getattr(popup, 'schedule_ids', [])
-        selected_schedule_ids = [schedule_ids[i] for i in selected_indices if i < len(schedule_ids)]
-        
-        if not selected_schedule_ids:
-            return
-        
-        count = len(selected_schedule_ids)
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        confirm = messagebox.askyesno("Info agendamento", f"Deseja reagendar {'o serviço selecionado' if count == 1 else f'os {count} serviços selecionados'} de {date_str}?")
-        if not confirm:
-            return
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            
-            id_list = ','.join(str(sid) for sid in selected_schedule_ids)
-            conn.Execute(f"UPDATE [IST-PGE].dbo.Service_Schedule SET status = 'PENDING', scheduled_start = NULL, scheduled_end = NULL, updated_at = GETDATE() WHERE id IN ({id_list})")
-            conn.Execute(f"DELETE FROM [IST-PGE].dbo.Time_Slots WHERE schedule_id IN ({id_list})")
-            conn.Close()
-            
-            reschedule_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-
-            self.show_loading_screen(f"Agendando {len(selected_indices)} {'itens' if len(selected_indices) > 1 else 'item'} em Laboratório de {self.lab_name}")
-            first_start, last_end = self.schedule_all_pending(from_date=reschedule_date + timedelta(days=1))
-            
-            self.refresh_calendar()
-
-            popup.destroy()
-            self.hide_loading_screen()
-            
-            #msg = f"Serviço reagendado para {self.next_start.strftime('%d/%m/%Y')}" if count == 1 else f"{count} serviços reagendados"
-            msg = f"Serviço reagendado para {last_end.strftime('%d/%m/%Y')} às {last_end.strftime('%H:%M')}" if count == 1 else f"Serviços reagendados para a partir de {first_start.strftime('%d/%m/%Y')} às {first_start.strftime('%H:%M')}"
-            self.status_label.config(text=msg)
-            messagebox.showinfo('Info agendamento', msg)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao reagendar:\n{str(e)}")
-
-    def remove_day_exceptions(self, calendar_key):
-        date_str = f"{calendar_key[0]:02d}/{calendar_key[1]:02d}/{calendar_key[2]}"
-        exc_date = datetime(calendar_key[2], calendar_key[1], calendar_key[0]).date()
-        exceptions = self.load_exceptions_for_date(exc_date)
-        count = len(exceptions)
-        
-        if count == 1:
-            
-            messagebox.showerror("Erro kkkkkkkkkkk", f"Falha ao remover bloqueios:\n\nalá tentou remover o bloqueio 'Intervalinho' kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
-            return
-        
-        confirm = messagebox.askyesno("Info agendamento", f"Deseja remover {'o bloqueio' if count > 1 and count < 3 else f'os {count-1} bloqueios'} do dia {date_str}?")
-        if not confirm:
-            return
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            date_str_sql = exc_date.strftime('%Y-%m-%d')
-            conn.Execute(f"DELETE FROM [IST-PGE].dbo.Calendar_Exceptions WHERE exception_date = '{date_str_sql}' AND id_sector = {self.id_sector} AND (notes IS NULL OR notes NOT LIKE '%Intervalinho%')")
-            conn.Close()
-            
-            self.refresh_calendar()
-
-            self.status_label.config(text=f"{'Bloqueios removidos' if count > 2 and count < 4 else 'bloqueio removido'} de {date_str}")
-
-            messagebox.showinfo("Info agendamento", f"{'Bloqueios removidos' if count > 2 and count < 4 else 'Bloqueio removido'} de {date_str}")
-        except Exception as e:
-            messagebox.showerror("Info agendamento", f"Falha ao remover bloqueios:\n{str(e)}")
-
-    def get_sharepoint_url(self, os_code):
-        if not os_code:
-            return ""
-        os_year = os_code[-4:]
-        os_parts = os_code.split('/')
-        os_code_num = os_parts[0].lstrip('0')
-        os_code_num = format_os_code(os_code_num)
-        return f"https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Atendimento%20ao%20Cliente/E%20-%20Ordens%20de%20Servi%C3%A7o/{os_year}/{os_code_num}"
-
-    def load_services(self):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-            
-            rs.Open("""SELECT 
-                    id, 
-                    code, 
-                    specification, 
-                    execution_time_minutes, 
-                    description,
-                    procedure_name,
-                    procedure_url 
-
-                    FROM [IST-PGE].dbo.Service_Modes_Local 
-
-                    ORDER BY code ASC""", conn)
-            
-            self.services_data = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    
-                    procedure_name = rs.Fields('procedure_name').Value if len(str(rs.Fields('procedure_name').Value)) != None else '(vazio)'
-
-                    self.services_data.append({
-                        'id': rs.Fields('id').Value,
-                        'code': rs.Fields('code').Value,
-                        'specification': rs.Fields('specification').Value,
-                        'description': rs.Fields('description').Value,
-                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
-                        'procedure_name': procedure_name,
-                        'procedure_url': rs.Fields('procedure_url').Value
-
-                    })
-                    rs.MoveNext()
-            rs.Close()
-            conn.Close()
-        except Exception as e:
-            self.status_label.config(text=f"Erro ao carregar serviços: {str(e)}")
-
-    def clear_all_scheduled(self):
-        
-        confirm = messagebox.askyesno("Info agendamento", f"Tem certeza de que deseja limpar a agenda de serviços de Laboratório de {self.lab_name}?")
-
-        if not confirm:
-            return
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            conn.Execute(f"DELETE FROM [IST-PGE].dbo.Time_Slots WHERE id_sector = {self.id_sector}")
-            conn.Execute(f"DELETE FROM [IST-PGE].dbo.Service_Schedule WHERE id_sector = {self.id_sector}")
-            conn.Close()
-            
-            self.refresh_calendar()
-            self.status_label.config(text=f"Os agendamentos de serviços da agenda de {self.lab_name} foram removidos")
-            messagebox.showinfo("Sucesso", f"Todos os agendamentos de serviços foram removidos de Laboratório de {self.lab_name}!")
-
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao limpar agenda:\n{str(e)}")
-
-    def update_queue_count(self):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn)
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            rs.Open(f"SELECT COUNT(*) as cnt FROM [IST-PGE].dbo.Service_Schedule WHERE status = 'PENDING' AND id_sector = {self.id_sector}", conn)
-            count = rs.Fields('cnt').Value if not rs.EOF else 0
-            rs.Close()
-            conn.Close()
-        except Exception:
-            pass
-
-    def change_month(self, offset):
-        self.current_month_offset += offset
-        self.load_calendar_data()
-        self.render_calendar()
-
-    def go_to_today(self):
-        self.current_month_offset = 0
-        self.load_calendar_data()
-        self.render_calendar()
-
-    def refresh_calendar(self):
-        self.load_calendar_data()
-        self.render_calendar()
-        self.update_queue_count()
-
-
-class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
-    """ ABA: Serviços para Agendamento (Linked Server) - Multi-Laboratório """
-    
-    def __init__(self, parent_notebook, str_conn, str_conn_primary, cor_fundo, lab_code="", lab_config=None):
-        self.str_conn = str_conn
-        self.str_conn_primary = str_conn_primary
-        self.cor_fundo = cor_fundo
-        self.lab_code = lab_code
-        self.lab_config = lab_config or {}
-        
-        lab_name = self.lab_config.get('name', lab_code)
-        sector_id = self.lab_config.get('sector_id', 0)
-        
-        tab_name = f"Serviços de {lab_name}"
-        self.frame_certificados = ttk.Frame(parent_notebook)
-        parent_notebook.add(self.frame_certificados, text=tab_name)
-
-        parent_notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
-    
-        self.selected_services = []
-        self.all_rows = []
-        
-        self.setup_ui()
-        
-        try:
-            self.load_services()
-        except Exception as e:
-            self.status_label.config(text=f"Servidor vinculado indisponível: {str(e)[:80]}")
-        self.cleanup_pending_services()
-        
-    def open_procedure_manager(self):
-        """Open the procedure management window"""
-        ProcedureManager(
-            self.frame_certificados,
-            self.str_conn,
-            self.str_conn_primary,
-            self.cor_fundo,
-            lab_code=self.lab_code,
-            lab_config=self.lab_config
-        )
-
-    def on_tab_changed(self, event):
-        notebook = event.widget
-        current_tab = notebook.select()
-        current_tab_text = notebook.tab(current_tab, "text")
-        
-        if self.lab_config.get('name', '') in current_tab_text:
-            self.load_services()
-
-    def open_teams_chat(self):
-        try:
-            chat_id = self.lab_config.get('teams_chat_id', '')
-            if chat_id:
-                link = f"https://teams.cloud.microsoft/l/chat/19:{chat_id}@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
-                webbrowser.open(link)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao abrir chat:\n{str(e)}")
-
-    def setup_ui(self):
-        lab_name = self.lab_config.get('name', '')
-        
-        main_container = tk.Frame(self.frame_certificados, bg=self.cor_fundo)
-        main_container.pack(fill='both', expand=True, padx=10, pady=10)
-        
-        # Top frame
-        top_frame = tk.Frame(main_container, bg=self.cor_fundo)
-        top_frame.pack(fill='x', pady=(0, 10))
-        
-        self.greetings = ttk.Label(top_frame, text=f"{buenas}", font=("Segoe UI", 10), background='black')
-        self.greetings.pack(side='left', padx=5)
-        
-        #tk.Label(top_frame, text=f"meme Serviços em Laboratório de {lab_name}",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white').pack(side='left', padx=20)
-        tk.Label(top_frame, text=f"Lista de Serviços",font=('Segoe UI', 12, 'bold'), bg=self.cor_fundo, fg='white').pack(side='left', padx=20)
-        
-        self.lbl_count = tk.Label(top_frame, text="0 selecionados", font=('Segoe UI', 9, 'bold'),bg=self.cor_fundo, fg='#FFD700')
-        self.lbl_count.pack(side='right', padx=20)
-        
-        # Search
-        search_frame = tk.Frame(main_container, bg=self.cor_fundo)
-        search_frame.pack(fill='x', pady=(0, 5))
-        
-        tk.Label(search_frame, text="Buscar:", font=('Segoe UI', 9), bg=self.cor_fundo, fg='white').pack(side='left', padx=(0, 5))
-        
-        self.search_var = tk.StringVar()
-        self.search_var.trace('w', lambda *args: self.filter_treeview())
-        
-        self.search_entry = ttk.Entry(search_frame, textvariable=self.search_var, width=40)
-        self.search_entry.pack(side='left', padx=5)
-        
-        # Treeview
-        tree_frame = ttk.Frame(main_container)
-        tree_frame.pack(fill='both', expand=True)
-        
-        tree_scroll_y = ttk.Scrollbar(tree_frame)
-        tree_scroll_y.pack(side='right', fill='y')
-        
-        tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
-        tree_scroll_x.pack(side='bottom', fill='x')
-        
-        #columns = ("OS", "Item", "Especificação", "Descrição", "Código", "Duração")
-        columns = ("Entrega","OS", "Item", "Tipo","Especificação", "Código", "Duração","Instrução de Trabalho")
-        
-        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",yscrollcommand=tree_scroll_y.set,xscrollcommand=tree_scroll_x.set,selectmode="extended")
-        
-        tree_scroll_y.config(command=self.tree.yview)
-        tree_scroll_x.config(command=self.tree.xview)
-        
-        column_widths = {"Entrega":                 40, 
-                        "OS":                       80, 
-                        "Item":                     120, 
-                        "Tipo":                     200, 
-                        "Especificação":            200, 
-                        "Descrição":                250, 
-                        "Código":                   50, 
-                        "Duração":                  70, 
-                        "Status de Agendamento":    110,
-                        "Instrução de Trabalho":    70
-                        }
-        
-        for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=column_widths.get(col, 80), minwidth=10)
-        
-        self.tree.pack(expand=True, fill='both')
-        
-        self.tree.bind('<Button-3>', self.show_context_menu)
-        self.tree.bind('<<TreeviewSelect>>', self.on_tree_select)
-        self.tree.bind('<Control-a>', self.select_all)
-        self.tree.bind('<Control-A>', self.select_all)
-        
-        button_frame = tk.Frame(main_container, bg=self.cor_fundo)
-        button_frame.pack(fill='x', pady=(10, 0))
-
-        self.btn_select_all = ttk.Button(button_frame, text=" Selecionar Todos ", command=self.select_all, cursor='hand2')
-        self.btn_select_all.pack(side="left", padx=5)
-
-        if bool_agenda == 1:
-            self.btn_schedule = ttk.Button(button_frame, text=" Agendar Selecionados ", command=self.schedule_selected, cursor='hand2')
-            self.btn_schedule.pack(side="left", padx=5)
-            self.btn_schedule.config(state="disabled")
-
-        btn_refresh = ttk.Button(button_frame, text=" Atualizar Lista ", command=self.load_services, cursor='hand2')
-        btn_refresh.pack(side="left", padx=5)
-
-        self.btn_clear = ttk.Button(button_frame, text=" Limpar Seleção ", command=self.clear_selection, cursor='hand2')
-        self.btn_clear.pack(side="left", padx=5)
-        
-        if bool_agenda == 1:
-            self.btn_exception = ttk.Button(button_frame, text=" Adicionar Bloqueio de Agenda ", command=self.add_calendar_exception, cursor='hand2')
-            self.btn_exception.pack(side="left", padx=5)
-            
-            
-        self.btn_procedures = ttk.Button(button_frame, text=" Lista de Tempos, Serviços e ITs ", command=self.open_procedure_manager, cursor='hand2')
-        self.btn_procedures.pack(side="left", padx=5)
-
-        #self.status_label = ttk.Label(self.frame_certificados,text="Selecione os serviços e use o botão direito para agendar",font=("Segoe UI", 12))
-        #self.status_label.pack(pady=5)
-
-        #self.btn_export = ttk.Button(button_frame, text="Exportar Relatório de Programação de Serviços ", command=self.export_to_pdf, cursor='hand2')
-        #self.btn_export.pack(side="left", padx=5)
-
-    def cleanup_pending_services(self):
-        """Remove PENDING services that have no schedule (orphaned)"""
-        sector_id = self.lab_config.get('sector_id', 0)
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn_primary)
-            
-            # Get orphaned services
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            sql = f"""
-                SELECT ss.id, ss.notes
-                FROM [IST-PGE].dbo.Service_Schedule ss
-                WHERE ss.status = 'PENDING'
-                AND ss.scheduled_start IS NULL
-                AND ss.scheduled_end IS NULL
-                AND ss.id_sector = {sector_id}
-            """
-            rs.Open(sql, conn)
-            
-            orphaned = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    orphaned.append({
-                        'id': rs.Fields('id').Value,
-                        'notes': rs.Fields('notes').Value if rs.Fields('notes').Value else "Sem observações"
-                    })
-                    rs.MoveNext()
-            rs.Close()
-            
-            if orphaned:
-                # Delete them
-                ids = ','.join(str(o['id']) for o in orphaned)
-                conn.Execute(f"DELETE FROM [IST-PGE].dbo.Service_Schedule WHERE id IN ({ids})")
-                
-                # Build message
-                count = len(orphaned)
-                if count == 1:
-                    msg = f"Foi removido 1 registro pendente sem agendamento:\n\n"
-                else:
-                    msg = f"Foram removidos {count} registros com erro de agendamento:\n\n"
-                
-                for o in orphaned[:5]:  # Show max 5
-                    msg += f"• {o['notes'][:80]}\n"
-                
-                if count > 5:
-                    msg += f"\n... e mais {count - 5} registro(s)."
-                
-                messagebox.showinfo("Limpeza de Registros Pendentes", msg)
-            
-            conn.Close()
-            
-        except Exception as e:
-            print(f"Error cleaning up pending services: {e}")
-
-    def show_loading_screen(self, message="Carregando..."):
-        """Show a loading overlay with dynamic info"""
-        self.loading_popup = tk.Toplevel(self.frame_certificados)
-        self.loading_popup.geometry("550x130")
-        
-        cor_fundo2 = _from_rgb((0,0,0))
-        self.loading_popup.configure(bg=cor_fundo2)
-        self.loading_popup.title("")
-        self.loading_popup.overrideredirect(True)
-        self.loading_popup.attributes('-topmost', True)
-        
-        # Center on parent
-        self.loading_popup.update_idletasks()
-        x = self.frame_certificados.winfo_rootx() + (self.frame_certificados.winfo_width() // 2) - 175
-        y = self.frame_certificados.winfo_rooty() + (self.frame_certificados.winfo_height() // 2) - 65
-        self.loading_popup.geometry(f"+{x}+{y}")
-        
-        frame = tk.Frame(self.loading_popup, bg=cor_fundo2, highlightbackground="#FFFFFF", highlightthickness=2)
-        frame.pack(fill='both', expand=True, padx=2, pady=2)
-
-        if bool_agenda == 1:
-            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Agenda está carregando:", font=('Segoe UI', 10), background='black', fg='white').pack(pady=(15, 5))
-        elif bool_agenda == 0:
-            tk.Label(frame, text=f"Oioi, {username}! O Assistente de Dados está carregando:", font=('Segoe UI', 10), background='black', fg='white').pack(pady=(15, 5))
-
-        #tk.Label(frame, text=f"Laboratório de {self.lab_}", font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg="#FFFFFF").pack(pady=(5, 5))
-        
-        # Message
-        tk.Label(frame, text=message, font=('Segoe UI', 11),bg='white', fg='black').pack(pady=(5, 5))
-        
-        self.loading_popup.grab_set()
-        self.loading_popup.update()
-
-    def hide_loading_screen(self):
-        """Hide the loading overlay"""
-        if hasattr(self, 'loading_popup') and self.loading_popup.winfo_exists():
-            self.loading_popup.grab_release()
-            self.loading_popup.destroy()
-
-    def load_services(self):
-        """Load services from linked server for this lab"""
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        
-        self.all_rows.clear()
-        
-        lab_code = self.lab_code
-        sector_id = self.lab_config.get('sector_id', 0)
-
-        try:
-            # 1. Query linked server
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn)
-
-            sql = f"""
-                SELECT 
-                    CONVERT(VARCHAR(10),os.date_finished, 103) as 'Entrega',
-                    os.code AS 'OS', i.code AS 'Item',
-                    it.name as 'Tipo', sm.specification AS 'Especificação',
-                    sm.description AS 'Descrição', sm.code AS 'Code',
-                    sm.execution_time AS 'execution_time', sm.id AS 'service_mode_id'
-                FROM instruments_services iss
-                LEFT JOIN orders_services AS os ON os.id = iss.id_service_order 
-                LEFT JOIN service_modes AS sm ON sm.id = iss.id_service
-                LEFT JOIN instruments AS i ON i.id = iss.id_instrument AND i.id_service_order = os.id
-                LEFT JOIN budgets AS b ON b.id_order_service = os.id
-                LEFT JOIN instrument_types as it on it.id = i.id_instrument_type
-                WHERE os.removed = 0 AND iss.removed = 0 AND sm.removed = 0
-                AND i.removed = 0 AND b.is_last_revision = 1
-                AND (i.id_current_sector = {sector_id} or i.id_current_sector = 1)
-                AND sm.code LIKE '%631{lab_code.lower()}%'
-                ORDER BY os.receiving_date ASC
-            """
-            
-            rs.Open(sql, conn)
-            
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    execution_time_raw = rs.Fields('execution_time').Value
-                    duration_minutes = self.convert_time_to_minutes(execution_time_raw) if execution_time_raw else 0
-                    
-                    os_code = rs.Fields('OS').Value if rs.Fields('OS').Value else ""
-                    os_year = os_code[-4:]
-                    os_parts = os_code.split('/')
-                    os_code_num = f"{os_parts[0].lstrip('0')}/{os_year}"
-
-                    row_data = {
-                        'Entrega': rs.Fields('Entrega').Value if rs.Fields('Entrega').Value else "",
-                        'OS': os_code_num,
-                        'Item': rs.Fields('Item').Value if rs.Fields('Item').Value else "",
-                        'Tipo': rs.Fields('Tipo').Value if rs.Fields('Tipo').Value else "",
-                        'Especificação': rs.Fields('Especificação').Value if rs.Fields('Especificação').Value else "",
-                        'Descrição': rs.Fields('Descrição').Value if rs.Fields('Descrição').Value else "",
-                        'Code': rs.Fields('Code').Value if rs.Fields('Code').Value else "",
-                        'execution_time_raw': str(execution_time_raw) if execution_time_raw else "00:00",
-                        'duration_minutes': duration_minutes,
-                        'service_mode_id': rs.Fields('service_mode_id').Value,
-                    }
-                    self.all_rows.append(row_data)
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            
-            # 2. Query local IST-PGE for scheduled status
-            scheduled_map = self._get_scheduled_status(sector_id)
-            
-            # 3. Query local IST-PGE for procedure info
-            procedure_map = self._get_procedure_map()
-            
-            # 4. Update treeview columns
-            self._update_treeview_columns()
-            
-            # 5. Insert rows with status and procedure
-            for row_data in self.all_rows:
-                item_code = row_data['Item']
-                service_code = row_data['Code']
-                status = scheduled_map.get(item_code, "Pendente")
-                
-                proc = procedure_map.get(service_code, {})
-                proc_display = proc.get('name', '')[:30] if proc.get('name') else ""
-                
-                self.tree.insert("", "end", values=(
-                    row_data['Entrega'],
-                    row_data['OS'], 
-                    row_data['Item'], 
-                    row_data['Tipo'],
-                    row_data['Especificação'],
-                    row_data['Code'], 
-                    f"{row_data['duration_minutes']} min",
-                    status,
-                    proc_display
-                ))
-            
-            count = len(self.all_rows)
-            
-        except Exception as e:
-            self.status_label.config(text=f"Erro: {str(e)}")
-
-    def _get_scheduled_status(self, sector_id):
-        """Get mapping of item_code → status from IST-PGE"""
-        status_map = {}
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn_primary)
-            
-            sql = f"""
-
-                SELECT 
-                ss.notes, 
-                ss.status, 
-                ss.scheduled_start, 
-                ss.scheduled_end
-
-                FROM [IST-PGE].dbo.Service_Schedule ss
-
-                WHERE ss.id_sector = {sector_id}
-                AND ss.status IN ('SCHEDULED', 'PENDING')
-
-            """
-            rs.Open(sql, conn)
-            
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    notes = rs.Fields('notes').Value if rs.Fields('notes').Value else ""
-                    status = rs.Fields('status').Value if rs.Fields('status').Value else ""
-                    scheduled_start = rs.Fields('scheduled_start').Value
-                    
-                    # Extract item code from notes (format: "OS X - ITEM - Spec")
-                    parts = notes.split(' - ')
-                    if len(parts) >= 2:
-                        item_code = parts[1].strip()
-                        
-                        if scheduled_start:
-                            if isinstance(scheduled_start, str):
-                                full_str = scheduled_start[:16]  # '2026-05-22 08:00'
-                                formatted = datetime.strptime(full_str, '%Y-%m-%d %H:%M').strftime('%d/%m/%Y - %H:%M')
-                            elif isinstance(scheduled_start, datetime):
-                                formatted = scheduled_start.strftime('%d/%m/%Y - %H:%M')
-                            else:
-                                formatted = str(scheduled_start)[:10]
-                            status_map[item_code] = datetime.strptime(full_str, '%Y-%m-%d %H:%M').strftime('%d/%m/%Y - %H:%M')
-                        else:
-                            formatted = "None"
-                            #full_str = scheduled_start[:16]  # '2026-05-22 08:00'
-                            #formatted = datetime.strptime(full_str, '%Y-%m-%d %H:%M').strftime('%d/%m/%Y - %H:%M')
-
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            
-        except Exception as e:
-            print(f"Error getting scheduled status: {e}")
-        
-        return status_map
-
-    def _get_procedure_map(self):
-        """Get mapping of service_code → procedure info from IST-PGE"""
-        procedure_map = {}
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn_primary)
-            
-            rs.Open("""
-                    
-                SELECT 
-                code, 
-                procedure_name, 
-                procedure_url 
-                    
-                FROM [IST-PGE].dbo.Service_Modes_Local
-                    
-            """, conn)
-
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    code = rs.Fields('code').Value
-                    name = rs.Fields('procedure_name').Value
-                    url = rs.Fields('procedure_url').Value
-                    
-                    # Show "(vazio)" if name is None or empty
-                    if not name or str(name).strip() == "":
-                        display_name = "[Vazio]"
-                    else:
-                        display_name = str(name)
-                    
-
-                    procedure_map[code] = {
-                        'name': display_name,
-                        'url': str(url) if url else ""
-                    }
-                    rs.MoveNext()
-            
-            rs.Close()
-            conn.Close()
-            
-        except Exception as e:
-            print(f"Error getting procedure map: {e}")
-        
-        return procedure_map
-    
-    def open_procedure_url(self):
-        """Open the procedure document for the selected service"""
-        selected = self.tree.selection()
-        if not selected:
-            return
-        
-        all_items = self.tree.get_children()
-        idx = all_items.index(selected[0])
-        
-        if idx < len(self.all_rows):
-            service_code = self.all_rows[idx]['Code']
-            procedure_map = self._get_procedure_map()
-            proc = procedure_map.get(service_code, {})
-            url = proc.get('url', '')
-            
-            if url:
-                webbrowser.open(url)
-            else:
-                service_name = self.all_rows[idx].get('Especificação', service_code)
-                messagebox.showinfo("Aviso", f"Nenhum procedimento cadastrado para:\n{service_code} - {service_name}")
-                
-    def _update_treeview_columns(self):
-        """Update treeview to include Status column"""
-        # Reconfigure columns
-        #self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Descrição", "Código", "Duração", "Status de Agendamento")
-        self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Código", "Duração", "Status de Agendamento", "Instrução de Trabalho")
-        
-        self.tree.heading("Entrega", text="Entrega")
-        self.tree.heading("OS", text="OS")
-        self.tree.heading("Item", text="Item")
-        self.tree.heading("Tipo", text="Tipo")
-        self.tree.heading("Especificação", text="Especificação")
-        #self.tree.heading("Descrição", text="Descrição")
-        self.tree.heading("Código", text="Código")
-        self.tree.heading("Duração", text="Duração")
-        self.tree.heading("Status de Agendamento", text="Status de Agendamento")
-        self.tree.heading("Instrução de Trabalho", text="Instrução de Trabalho")
-        
-        self.tree.column("Entrega", width=20)
-        self.tree.column("OS", width=20)
-        self.tree.column("Item", width=70)
-        self.tree.column("Tipo", width=70)
-        self.tree.column("Especificação", width=160)
-        #self.tree.column("Descrição", width=200)
-        self.tree.column("Código", width=30)
-        self.tree.column("Duração", width=20)
-        self.tree.column("Status de Agendamento", width=110)
-        self.tree.column("Instrução de Trabalho", width=70)
-        
-        ## Color tags for status
-        #self.tree.tag_configure('Disponível', background="#E0EC30")  # Green
-        #self.tree.tag_configure('PENDING', background='#FFF3CD')    # Yellow
-
-
-    def convert_time_to_minutes(self, time_str):
-        if not time_str:
-            return 0
-        try:
-            time_str = str(time_str).strip()
-            if ':' in time_str:
-                parts = time_str.split(':')
-                return int(parts[0]) * 60 + int(parts[1])
-            return 0
-        except Exception:
-            return 0
-    
-    def filter_treeview(self):
-        search_term = self.search_var.get().lower()
-        
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        
-        for row in self.all_rows:
-            if not search_term or \
-               search_term in str(row['OS']).lower() or \
-               search_term in str(row['Item']).lower() or \
-               search_term in str(row['Especificação']).lower() or \
-               search_term in str(row['Descrição']).lower() or \
-               search_term in str(row['Status']).lower() or \
-               search_term in str(row['Code']).lower():
-                
-                self.tree.insert("", "end", values=(
-                    row['OS'], 
-                    row['Item'], 
-                    row['Especificação'],
-                    row['Descrição'], 
-                    row['Code'], 
-                    f"{row['duration_minutes']} min",
-                ))
-    
-    def on_tree_select(self, event):
-        selected = self.tree.selection()
-        count = len(selected)
-        self.lbl_count.config(text=f"{count} selecionado(s)")
-        
-        if count > 0:
-            self.btn_schedule.config(state='normal')
-            self.btn_clear.config(state='normal')
-        else:
-            self.btn_schedule.config(state='disabled')
-            self.btn_clear.config(state='disabled')
- 
-    def show_context_menu(self, event):
-        selected = self.tree.selection()
-        if not selected:
-            return
-        
-        context_menu = tk.Menu(self.tree, tearoff=0)
-        count = len(selected)
-        lab_name = self.lab_config.get('name', '')
-
-        if bool_agenda == 1:
-            if count == 1:  
-                context_menu.add_command(label=f"Agendar serviço automaticamente", command=self.schedule_selected)
-            elif count > 1:
-                context_menu.add_command(label=f"Agendar serviços automaticamente", command=self.schedule_selected)
-            context_menu.add_separator()
-        
-        context_menu.add_command(label=f"Iniciar chat do Teams com Laboratório de {lab_name}", command=self.open_teams_chat)
-        context_menu.add_command(label="Abrir Instrução de Trabalho no EmDoc", command=self.open_procedure_url)
-        context_menu.add_command(label="Editar na Lista de Tempos, Serviços e ITs", command=self.open_procedure_url)
-        context_menu.add_separator()
-        context_menu.add_command(label="Selecionar todos", command=self.select_all)
-        context_menu.add_command(label="Limpar seleção", command=self.clear_selection)
-        
-        context_menu.post(event.x_root, event.y_root)
-
-    def select_all(self, event=None):
-        for item in self.tree.get_children():
-            self.tree.selection_add(item)
-        self.on_tree_select(None)
-    
-    def clear_selection(self):
-        for item in self.tree.selection():
-            self.tree.selection_remove(item)
-        self.on_tree_select(None)
-
-    def schedule_selected(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showwarning("Aviso", "Selecione pelo menos um serviço!")
-            return
-        
-        selected_indices = []
-        all_items = self.tree.get_children()
-                
-        for item in selected:
-            idx = all_items.index(item)
-            if idx < len(self.all_rows):
-                selected_indices.append(idx)
-        
-        sector_id = self.lab_config.get('sector_id', 0)
-        lab_name = self.lab_config.get('name', '')
-
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn_primary)
-            
-            added_count = 0
-            for idx in selected_indices:
-                row = self.all_rows[idx]
-                duration = row['duration_minutes']
-                item_code = row['Item']
-                
-                service_mode_id = row.get('service_mode_id', None)
-
-                # Sync to Service_Modes_Local
-                sync_sql = f"""
-                        IF NOT EXISTS (SELECT 1 FROM [IST-PGE].dbo.Service_Modes_Local WHERE id = {service_mode_id})
-                        BEGIN
-                            INSERT INTO [IST-PGE].dbo.Service_Modes_Local (id, code, specification, description, execution_time_minutes)
-                            VALUES ({service_mode_id}, '{row['Code']}', '{str(row['Especificação']).replace("'", "''")}', 
-                                    '{str(row['Descrição']).replace("'", "''")}', {duration});
-                        END
-                        ELSE
-                        BEGIN
-                            UPDATE [IST-PGE].dbo.Service_Modes_Local
-                            SET execution_time_minutes = {duration},
-                                specification = '{str(row['Especificação']).replace("'", "''")}',
-                                description = '{str(row['Descrição']).replace("'", "''")}'
-                            WHERE id = {service_mode_id};
-                        END
-                    """
-                conn.Execute(sync_sql)
-                
-                rs = win32com.client.Dispatch("ADODB.Recordset")
-                rs.Open(f"SELECT id FROM [IST-PGE].dbo.Service_Modes_Local WHERE id = {service_mode_id}", conn)
-                local_service_id = rs.Fields('id').Value if not rs.EOF else None
-                rs.Close()
-                
-                if local_service_id:
-                    
-                    conn.Execute(f"""
-                        DELETE FROM [IST-PGE].dbo.Time_Slots 
-                        WHERE schedule_id IN (
-                            SELECT id FROM [IST-PGE].dbo.Service_Schedule 
-                            WHERE notes LIKE '% - {item_code} - %' AND id_sector = {sector_id}
-                        )""")
-
-                    conn.Execute(f"""
-                        DELETE FROM [IST-PGE].dbo.Service_Schedule 
-                        WHERE notes LIKE '% - {item_code} - %' AND id_sector = {sector_id}
-                    """)
-                    
-                    # Insert new schedule
-                    notes = f"OS {row['OS']} - {row['Item']} - {row['Especificação']}"
-                    schedule_sql = f"""
-                        INSERT INTO [IST-PGE].dbo.Service_Schedule (service_id, notes, id_sector)
-                        VALUES ({local_service_id}, '{notes.replace("'", "''")}', {sector_id})
-                    """
-                    conn.Execute(schedule_sql)
-                    added_count += 1
-            
-            conn.Close()
-            
-            #if added_count == 1:
-            #    self.status_label.config(text=f"{added_count} serviço adicionado à fila!")
-            #elif added_count == 0:
-            #    self.status_label.config(text=f"Nenhum serviço adicionado à fila!")
-            #else:
-            #    self.status_label.config(text=f"{added_count} serviços adicionados à fila!")
-                
-            self.clear_selection()
-            self.process_fifo()
-            self.hide_loading_screen()
-            
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao agendar:\n{str(e)}")
-
-    def process_fifo(self):
-        
-        sector_id = self.lab_config.get('sector_id', 0)
-        lab_name = self.lab_config.get('name', '')
-        
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn_primary)
-            
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            
-            sql = f"""
-                SELECT 
-                ss.id as schedule_id, 
-                ss.service_id,
-                s.execution_time_minutes, 
-                ss.priority, 
-                ss.requested_at, 
-                ss.notes
-
-                FROM [IST-PGE].dbo.Service_Schedule ss
-
-                JOIN [IST-PGE].dbo.Service_Modes_Local s ON ss.service_id = s.id
-                
-                WHERE ss.status = 'PENDING' AND ss.id_sector = {sector_id}
-                ORDER BY ss.priority ASC, ss.requested_at ASC
-            """
-            rs.Open(sql, conn)
-            
-            pending_services = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    pending_services.append({
-                        'schedule_id': rs.Fields('schedule_id').Value,
-                        'service_id': rs.Fields('service_id').Value,
-                        'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
-                        'priority': rs.Fields('priority').Value,
-                        'requested_at': rs.Fields('requested_at').Value,
-                        'notes': rs.Fields('notes').Value
-                    })
-                    rs.MoveNext()
-            rs.Close()
-            
-            pending_count = len(pending_services)
-            if pending_count == 0:
-                messagebox.showinfo("Aviso", "Nenhum serviço pendente na fila!")
-                conn.Close()
-                return
-            
-            self.show_loading_screen(f"Agendamento de {pending_count} {'serviços' if pending_count > 1 else 'serviço' } em Laboratório de {lab_name}...")
-            self.frame_certificados.update()
-
-            current_time = datetime.now()
-            scheduled_count = 0
-            for service in pending_services:
-                next_start, next_end = self.find_next_available_slot(current_time, service['execution_time_minutes'])
-                
-
-                if next_start is None:
-                    continue
-                conn.Execute(f"""
-                    UPDATE [IST-PGE].dbo.Service_Schedule
-                    SET scheduled_start = '{next_start.strftime('%Y-%m-%d %H:%M:%S')}',
-                        scheduled_end = '{next_end.strftime('%Y-%m-%d %H:%M:%S')}',
-                        status = 'SCHEDULED', updated_at = GETDATE()
-                    WHERE id = {service['schedule_id']}
-                """)
-                
-                conn.Execute(f"""
-                    INSERT INTO [IST-PGE].dbo.Time_Slots (slot_date, start_time, end_time, schedule_id, service_id, id_sector)
-                    VALUES ('{next_start.strftime('%Y-%m-%d')}', '{next_start.strftime('%H:%M:%S')}',
-                            '{next_end.strftime('%H:%M:%S')}', {service['schedule_id']},
-                            {service['service_id']}, {sector_id})
-                """)
-
-                current_time = next_end
-                scheduled_count += 1
-            
-            self.hide_loading_screen()
-            conn.Close()
-            
-            if scheduled_count == 1:
-                self.load_services()
-                messagebox.showinfo("Info agendamento", f"{scheduled_count} serviço agendado em Laboratório de {lab_name}!")                
-            else:
-                self.load_services()
-                messagebox.showinfo("Info agendamento", f"{scheduled_count} serviços agendados em Laboratório de {lab_name}!")
-              
-        except Exception as e:
-            self.hide_loading_screen()
-            messagebox.showerror("Erro", f"Falha ao processar fila:\n{str(e)}")
-        
-    # ===== FIFO ENGINE (same as ServiceScheduler) =====
-    
-    def find_next_available_slot(self, from_time, duration_minutes):
-        check_date = from_time.date()
-        max_days = 365
-        max_iterations_per_window = 100  # Safety limit
-        
-        availability = self._get_availability()
-        exceptions = self._get_exceptions()
-        
-        for day_offset in range(max_days):
-            sql_day_of_week = (check_date.weekday() + 1) % 7
-            day_windows = [w for w in availability if w['day_of_week'] == sql_day_of_week]
-            
-            if not day_windows:
-                check_date += timedelta(days=1)
-                from_time = datetime.combine(check_date, time(8, 0))
-                continue
-            
-            full_day_blocked = any(
-                ex['exception_date'] == check_date and ex['is_available'] == False and ex['start_time'] is None
-                for ex in exceptions
-            )
-            
-            if full_day_blocked:
-                check_date += timedelta(days=1)
-                from_time = datetime.combine(check_date, time(8, 0))
-                continue
-            
-            for window in sorted(day_windows, key=lambda w: w['start_time']):
-                window_start_dt = datetime.combine(check_date, window['start_time'])
-                window_end_dt = datetime.combine(check_date, window['end_time'])
-                proposed_start = max(from_time, window_start_dt)
-                
-                iterations = 0
-                while proposed_start + timedelta(minutes=duration_minutes) <= window_end_dt:
-                    iterations += 1
-                    if iterations > max_iterations_per_window:
-                        break  # Safety break
-                    
-                    proposed_end = proposed_start + timedelta(minutes=duration_minutes)
-                    
-                    # Check time-specific exceptions
-                    blocked_by_exception = False
-                    for ex in exceptions:
-                        if (ex['exception_date'] == check_date and ex['is_available'] == False
-                            and ex['start_time'] is not None and ex['end_time'] is not None):
-                            ex_start_dt = datetime.combine(check_date, ex['start_time'])
-                            ex_end_dt = datetime.combine(check_date, ex['end_time'])
-                            if proposed_start < ex_end_dt and proposed_end > ex_start_dt:
-                                blocked_by_exception = True
-                                proposed_start = ex_end_dt
-                                break
-                    
-                    if blocked_by_exception:
-                        continue
-                    
-                    # Check conflicts
-                    if self._has_time_slot_conflict(check_date, proposed_start.time(), proposed_end.time()):
-                        next_free = self._get_next_free_time(check_date, proposed_start.time())
-                        if next_free is None:
-                            break  # No free time found, exit this window
-                        new_start = datetime.combine(check_date, next_free)
-                        if new_start <= proposed_start:  # No progress
-                            break  # Prevent infinite loop
-                        proposed_start = new_start
-                        continue
-                    
-                    return proposed_start, proposed_end
-                
-                # Break out of while without finding slot — try next window
-            
-            check_date += timedelta(days=1)
-            if day_windows:
-                earliest = min(w['start_time'] for w in day_windows)
-                from_time = datetime.combine(check_date, earliest)
-            else:
-                from_time = datetime.combine(check_date, time(8, 0))
-        
-        return None, None
-
-    def _get_availability(self):
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn_primary)
-            
-            rs.Open("SELECT day_of_week, start_time, end_time FROM [IST-PGE].dbo.Calendar_Availability WHERE is_active = 1 ORDER BY day_of_week, start_time", conn)
-            
-            result = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    start_t = rs.Fields('start_time').Value
-                    end_t = rs.Fields('end_time').Value
-                    if isinstance(start_t, str):
-                        parts = start_t.split(':')
-                        start_t = time(int(parts[0]), int(parts[1]))
-                    if isinstance(end_t, str):
-                        parts = end_t.split(':')
-                        end_t = time(int(parts[0]), int(parts[1]))
-                    
-                    result.append({'day_of_week': rs.Fields('day_of_week').Value, 'start_time': start_t, 'end_time': end_t})
-                    rs.MoveNext()
-            rs.Close()
-            conn.Close()
-            return result
-        except Exception as e:
-            print(f"Error loading availability: {e}")
-            return []
-
-    def _get_exceptions(self):
-        sector_id = self.lab_config.get('sector_id', 0)
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn_primary)
-            
-            rs.Open(f"SELECT exception_date, exception_type, start_time, end_time, is_available FROM [IST-PGE].dbo.Calendar_Exceptions WHERE id_sector = {sector_id}", conn)
-            
-            result = []
-            if not rs.EOF:
-                rs.MoveFirst()
-                while not rs.EOF:
-                    exc_date = rs.Fields('exception_date').Value
-                    if isinstance(exc_date, str):
-                        exc_date = datetime.strptime(exc_date, '%Y-%m-%d').date()
-                    elif isinstance(exc_date, datetime):
-                        exc_date = exc_date.date()
-                    
-                    start_t = rs.Fields('start_time').Value
-                    end_t = rs.Fields('end_time').Value
-                    if start_t and isinstance(start_t, str):
-                        parts = start_t.split(':')
-                        start_t = time(int(parts[0]), int(parts[1]))
-                    if end_t and isinstance(end_t, str):
-                        parts = end_t.split(':')
-                        end_t = time(int(parts[0]), int(parts[1]))
-                    
-                    result.append({'exception_date': exc_date, 'exception_type': rs.Fields('exception_type').Value,
-                                   'start_time': start_t, 'end_time': end_t, 'is_available': rs.Fields('is_available').Value})
-                    rs.MoveNext()
-            rs.Close()
-            conn.Close()
-            return result
-        except Exception as e:
-            print(f"Error loading exceptions: {e}")
-            return []
-
-    def _has_time_slot_conflict(self, check_date, start_time, end_time):
-        sector_id = self.lab_config.get('sector_id', 0)
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn_primary)
-            
-            start_str = start_time.strftime('%H:%M:%S') if isinstance(start_time, time) else str(start_time)
-            end_str = end_time.strftime('%H:%M:%S') if isinstance(end_time, time) else str(end_time)
-            date_str = check_date.strftime('%Y-%m-%d')
-            
-            rs.Open(f"""
-                SELECT COUNT(*) as cnt FROM [IST-PGE].dbo.Time_Slots
-                WHERE slot_date = '{date_str}' AND start_time < '{end_str}' AND end_time > '{start_str}' AND id_sector = {sector_id}
-            """, conn)
-            count = rs.Fields('cnt').Value if not rs.EOF else 0
-            rs.Close()
-            conn.Close()
-            return count > 0
-        except Exception as e:
-            print(f"Error checking conflicts: {e}")
-            return True
-
-    def _get_next_free_time(self, check_date, after_time):
-        sector_id = self.lab_config.get('sector_id', 0)
-        try:
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            rs = win32com.client.Dispatch("ADODB.Recordset")
-            conn.Open(self.str_conn_primary)
-            
-            date_str = check_date.strftime('%Y-%m-%d')
-            time_str = after_time.strftime('%H:%M:%S') if isinstance(after_time, time) else str(after_time)
-            
-            rs.Open(f"""
-                SELECT TOP 1 end_time FROM [IST-PGE].dbo.Time_Slots
-                WHERE slot_date = '{date_str}' AND start_time <= '{time_str}' AND end_time > '{time_str}' AND id_sector = {sector_id}
-                ORDER BY end_time ASC
-            """, conn)
-            
-            if not rs.EOF:
-                end_time = rs.Fields('end_time').Value
-                result = self._parse_time_value(end_time)
-                rs.Close()
-                conn.Close()
-                return result
-            rs.Close()
-            
-            rs.Open(f"""
-                SELECT TOP 1 end_time FROM [IST-PGE].dbo.Time_Slots
-                WHERE slot_date = '{date_str}' AND start_time > '{time_str}' AND id_sector = {sector_id}
-                ORDER BY start_time ASC
-            """, conn)
-            
-            if not rs.EOF:
-                end_time = rs.Fields('end_time').Value
-                result = self._parse_time_value(end_time)
-                rs.Close()
-                conn.Close()
-                return result
-            
-            rs.Close()
-            conn.Close()
-            return None
-        except Exception as e:
-            print(f"Error getting next free time: {e}")
-            return None
-
-    def _parse_time_value(self, value):
-        if value is None: return None
-        if isinstance(value, time): return value
-        if isinstance(value, str):
-            value = value.split('.')[0]
-            if ':' in value:
-                parts = value.split(':')
-                return time(int(parts[0]), int(parts[1]), 0)
-            return time(int(value), 0, 0)
-        if isinstance(value, float):
-            total_hours = value * 24
-            return time(int(total_hours), int((total_hours - int(total_hours)) * 60), 0)
-        if isinstance(value, datetime): return time(value.hour, value.minute, 0)
-        return None
-    
-    def add_calendar_exception(self):
-        popup = tk.Toplevel(self.frame_certificados)
-        popup.geometry("400x400")
-        popup.minsize(400, 400)
-        popup.maxsize(400, 400)
-        popup.configure(bg='black')
-        
-        lab_name = self.lab_config.get('name', '')
-        popup.title(f"Adicionar Bloqueio de Agenda - Laboratório de {lab_name}")
-        
-        popup.transient(self.frame_certificados)
-        
-        tk.Label(popup, text=f"Adicionar Bloqueio de Agenda",font=('Segoe UI', 13, 'bold'), bg='black', fg='white').pack(anchor='w',padx=15, pady=(15, 0))
-        
-        tk.Label(popup, text="Data:", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(15, 0),)
-        
-        date_frame = tk.Frame(popup, bg='black')
-        date_frame.pack(fill='x', padx=20, pady=(2, 5))
-        
-        self.exc_day_var = tk.StringVar(value=datetime.now().strftime('%d'))
-        self.exc_month_var = tk.StringVar(value=datetime.now().strftime('%m'))
-        self.exc_year_var = tk.StringVar(value=datetime.now().strftime('%Y'))
-        
-        ttk.Entry(date_frame, textvariable=self.exc_day_var, width=3).pack(side='left')
-        tk.Label(date_frame, text="/", bg='black', fg='white').pack(side='left')
-        ttk.Entry(date_frame, textvariable=self.exc_month_var, width=3).pack(side='left')
-        tk.Label(date_frame, text="/", bg='black', fg='white').pack(side='left')
-        ttk.Entry(date_frame, textvariable=self.exc_year_var, width=5).pack(side='left')
-        
-        tk.Label(popup, text="Horário de Início (HH:MM):", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(10, 0))
-        self.exc_start_var = tk.StringVar(value="")
-        exc_start_entry = ttk.Entry(popup, textvariable=self.exc_start_var, width=10)
-        exc_start_entry.pack(anchor='w', padx=20, pady=(2, 5))
-
-        tk.Label(popup, text="Horário de Encerramento (HH:MM):", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(5, 0))
-        self.exc_end_var = tk.StringVar(value="")
-        exc_end_entry = ttk.Entry(popup, textvariable=self.exc_end_var, width=10)
-        exc_end_entry.pack(anchor='w', padx=20, pady=(2, 5))
-
-        tk.Label(popup, text="Razão:", font=('Segoe UI', 9), bg='black', fg='white').pack(anchor='w', padx=20, pady=(5, 0))
-        self.exc_notes_var = tk.StringVar(value="")
-        ttk.Entry(popup, textvariable=self.exc_notes_var, width=40).pack(anchor='w', padx=20, pady=(2, 5))
-
-        def toggle_time_fields():
-            if self.exc_full_day.get():
-                exc_start_entry.config(state='disabled')
-                exc_end_entry.config(state='disabled')
-            else:
-                exc_start_entry.config(state='normal')
-                exc_end_entry.config(state='normal')
-
-        self.exc_full_day = tk.BooleanVar(value=False)
-        ttk.Checkbutton(popup, text="Dia inteiro", variable=self.exc_full_day, command=toggle_time_fields).pack(anchor='w', padx=20, pady=(10, 5))
-
-        btn_frame = tk.Frame(popup, bg='black')
-        btn_frame.pack(pady=15)
-        ttk.Button(btn_frame, text=" Salvar ", command=lambda: self.save_exception(popup)).pack(side='left', padx=5)
-        ttk.Button(btn_frame, text=" Cancelar ", command=popup.destroy).pack(side='left', padx=5)
-
-    def save_exception(self, popup):
-        sector_id = self.lab_config.get('sector_id', 0)
-        try:
-            day = self.exc_day_var.get().strip().zfill(2)
-            month = self.exc_month_var.get().strip().zfill(2)
-            year = self.exc_year_var.get().strip()
-            exception_date_sql = f"{year}-{month}-{day}"
-            exception_date_br = f"{day}/{month}/{year}"
-            datetime.strptime(exception_date_sql, '%Y-%m-%d')
-            
-            is_full_day = self.exc_full_day.get()
-            start_time = None if is_full_day else self.exc_start_var.get().strip()
-            end_time = None if is_full_day else self.exc_end_var.get().strip()
-            notes = self.exc_notes_var.get().strip() or "Indisponibilidade"
-            
-            if not is_full_day:
-                if not start_time or not end_time:
-                    messagebox.showwarning("Aviso", "Informe horário de início e fim!")
-                    return
-                for t in [start_time, end_time]:
-                    parts = t.split(':')
-                    if len(parts) != 2 or not (0 <= int(parts[0]) <= 23 and 0 <= int(parts[1]) <= 59):
-                        messagebox.showwarning("Aviso", "Formato de horário inválido! Use HH:MM")
-                        return
-                start_time_str = f"{start_time}:00"
-                end_time_str = f"{end_time}:00"
-            else:
-                start_time_str = None
-                end_time_str = None
-            
-            conn = win32com.client.Dispatch("ADODB.Connection")
-            conn.Open(self.str_conn_primary)
-            
-            sql = f"""
-                INSERT INTO [IST-PGE].dbo.Calendar_Exceptions (exception_date, exception_type, start_time, end_time, is_available, notes, id_sector)
-                VALUES ('{exception_date_sql}', 'MODIFIED_HOURS', {f"'{start_time_str}'" if start_time_str else 'NULL'},
-                        {f"'{end_time_str}'" if end_time_str else 'NULL'}, 0, '{notes.replace("'", "''")}', {sector_id})
-            """
-            conn.Execute(sql)
-            conn.Close()
-            
-            popup.destroy()
-            
-            if is_full_day:
-                msg = f"Bloqueio de agenda adicionado:\n\nData: {exception_date_br}\nDia inteiro\nRazão: {notes}"
-            else:
-                msg = f"Bloqueio de agenda adicionado:\n\nData: {exception_date_br}\nHorário: {start_time} às {end_time}\nRazão: {notes}"
-            
-            messagebox.showinfo("Info agendamento", msg)
-            #self.status_label.config(text=f"Bloqueio de calendário adicionado em: {exception_date_br}")
-        except ValueError:
-            messagebox.showwarning("Aviso", "Data inválida!")
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao salvar Bloqueio de Calendário:\n{str(e)}")
-
-
-class DatabaseViewer6: ### VISTA GERAL
-
-    def __init__(self, parent_notebook, str_conn, cor_fundo):   
-        #print('str_conn',str_conn) 
-        self.str_conn = str_conn    
-        self.cor_fundo = cor_fundo  
-        self.selected_items = []    
-        self.frame_certificados = ttk.Frame(parent_notebook)    
-        parent_notebook.add(self.frame_certificados, text=" Vista Geral de Ordens de Serviço ") 
-        
-        self.teams_chat_ids = {                 
-                    'Laboratório de Dimensional':                   '461bebb602cc4c2f997670af64f1bc50',
-                    'Laboratório de Massa':                         '474353252d224d7caf749a4b5301c4d8',
-                    'Laboratório de Pressão':                       'fc9176a569904180bbfa3eeb1bd52651',
-                    'Laboratório de Força, Torque e Dureza':        'fc9176a569904180bbfa3eeb1bd52651',
-                    'Laboratório de Volume e Massa Específica':     '34b79fe77c3e41b7a3030c4f010de73e',
-                    'Laboratório de Metrologia por Coordenadas':    '716ff922fa584a2582ecb48e509edc2e',
-                    'Laboratório de Temperatura e Umidade':         '680cba2db76043939995da4b21cfd11c',
-                    'Laboratório de Vazão':                         'e04abb13e3114d95b399290fe371a391',
-                    'Laboratório de Eletricidade':                  '680cba2db76043939995da4b21cfd11c',
-                    'Laboratório de Tempo e Frequência':            '680cba2db76043939995da4b21cfd11c',
-                    'Laboratório de Físico-Química':                '34b79fe77c3e41b7a3030c4f010de73e',
-                    'Revisão de Relatórios':                        '7e40040f299041f799e60f152711f017',
-                    'Relatórios Aguardando Assinaturas':            '7e40040f299041f799e60f152711f017',
-                    'Expedição':                                    'missing',
-                }
-        
-        # SILVIA NUNES 04/05/2026
-        #'https://teams.microsoft.com/l/chat/19:461bebb602cc4c2f997670af64f1bc50@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'https://teams.microsoft.com/l/chat/19:474353252d224d7caf749a4b5301c4d8@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'https://teams.microsoft.com/l/chat/19:fc9176a569904180bbfa3eeb1bd52651@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'https://teams.microsoft.com/l/chat/19:fc9176a569904180bbfa3eeb1bd52651@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'https://teams.microsoft.com/l/chat/19:34b79fe77c3e41b7a3030c4f010de73e@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'716ff922fa584a2582ecb48e509edc2e',
-        #'https://teams.microsoft.com/l/chat/19:680cba2db76043939995da4b21cfd11c@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'https://teams.microsoft.com/l/chat/19:e04abb13e3114d95b399290fe371a391@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'',
-        #'https://teams.microsoft.com/l/chat/19:680cba2db76043939995da4b21cfd11c@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'https://teams.microsoft.com/l/chat/19:680cba2db76043939995da4b21cfd11c@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-        #'https://teams.microsoft.com/l/chat/19:34b79fe77c3e41b7a3030c4f010de73e@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D',
-
-        self.setup_ui_agenda_os()
+        self.setup_ui_certificados()
     
     def on_entry_focus_in(self, event):
         if self.search_entry.get() == self.placeholder_text:
@@ -3838,28 +274,19 @@ class DatabaseViewer6: ### VISTA GERAL
             self.search_entry.insert(0, self.placeholder_text)
             style = ttk.Style()
             self.search_entry.configure(style='Placeholder.TEntry')
-
-    def setup_ui_agenda_os(self):
+        
+    def setup_ui_certificados(self):
         search_frame = ttk.Frame(self.frame_certificados)
         search_frame.pack(pady=10, padx=10, fill="x")
-
-        #ttk.Label(search_frame, text="Buscar:").pack(side="left", padx=(0, 15))
-        #self.search_entry = ttk.Entry(search_frame, width=30)
-        #self.search_entry.pack(side="left", padx=5)
-        #self.search_entry.bind('<Return>', lambda e: self.perform_search())
-
-        #ttk.Label(search_frame, text="Buscar:").pack(side="left", padx=(0, 15))
-        
-        #greeting_frame = ttk.Frame(search_frame)
-        #greeting_frame.pack(fill='x', pady=(0, 5))
         
         self.greetings = ttk.Label(search_frame, text=f"{buenas}", font=("Segoe UI", 10),background='black')
-        self.greetings.pack(side="left", padx=5, pady=(0, 0))
-        
+        self.greetings.pack(side="left", padx=5)
+
+        #ttk.Label(search_frame, text="Buscar:").pack(side="left", padx=(0, 15))
         self.search_entry = ttk.Entry(search_frame, width=30)
         self.search_entry.pack(side="left", padx=5)
         self.search_entry.bind('<Return>', lambda e: self.perform_search())
-
+        
         style = ttk.Style()
         style.configure('Placeholder.TEntry', foreground='#7D7D7D')
 
@@ -3870,9 +297,9 @@ class DatabaseViewer6: ### VISTA GERAL
         self.search_entry.bind('<FocusIn>', self.on_entry_focus_in)
         self.search_entry.bind('<FocusOut>', self.on_entry_focus_out)
         
-        self.buscar = ttk.Button(search_frame, text="Buscar", command=self.perform_search).pack(side="left", padx=5)
-        self.mostrar_todos = ttk.Button(search_frame, text="Mostrar Todos", command=self.load_all_records).pack(side="left", padx=5)
-                
+        ttk.Button(search_frame, text="Buscar", command=self.perform_search).pack(side="left", padx=5)
+        ttk.Button(search_frame, text="Mostrar Todos", command=self.load_all_records).pack(side="left", padx=5)
+        
         tree_frame = ttk.Frame(self.frame_certificados)
         tree_frame.pack(pady=10, padx=10, expand=True, fill="both")
         
@@ -3882,33 +309,46 @@ class DatabaseViewer6: ### VISTA GERAL
         tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
         tree_scroll_x.pack(side="bottom", fill="x")
         
-        columns = ("OS",
-                    "Recebimento", 
-                    "Entrega", 
-                    "Status",
-                    "Item",
+        columns = (
+                    "Padrão", 
+                    "Instrumento", 
+                    "Declaração de rastreabilidade metrológica",
+                    "Status", 
+                    #"Próxima Calibração", 
                     "Setor"
-                )
+                    #"Ativo/Inativo",
+                    #"Certificado",
+                    #"Fornecedor")
+        )
         
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set, selectmode="extended")
+
+        #self.tree.tag_configure('red_bg', background='red')
         
         tree_scroll_y.config(command=self.tree.yview)
         tree_scroll_x.config(command=self.tree.xview)
-        
-        column_widths3 = {
-            "OS":                   20,
-            "Recebimento":          20,
-            "Entrega":              40,
-            "Item":                 40,
-            "Status":               20,
-            "Setor":                40
-        }
-        
+
+        column_widths = {  
+
+                            "Padrão": 5,
+                            "Instrumento": 40,
+                            "Declaração de rastreabilidade metrológica": 250,
+                            "Status": 20,
+                            "Setor": 20,
+                            "Próxima Calibração": 20,
+                            "Ativo/Inativo": 20,
+                            "Certificado": 20,
+                            "Fornecedor": 20
+
+                        }
+
         for col in columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=column_widths3.get(col, 50), minwidth=20)
+            self.tree.column(col, width=column_widths.get(col, 100), minwidth=50)
         
         self.tree.pack(expand=True, fill="both")
+        
+        #self.tree.tag_configure('red_bg', background='red')
         
         self.tree.bind('<Button-3>', self.show_context_menu)
         
@@ -3927,16 +367,9 @@ class DatabaseViewer6: ### VISTA GERAL
         self.btn_limpar = ttk.Button(button_frame, text="Limpar Seleção", command=self.clear_selection)
         self.btn_limpar.pack(side="left", padx=5)
         self.btn_limpar.config(state="disabled")
-        
-        self.btn_limpar = ttk.Button(button_frame, text="Ir para Hoje", command=self.scroll_to_today)
-        self.btn_limpar.pack(side="left", padx=5)
 
         self.status_label = ttk.Label(self.frame_certificados, text="Pronto para consulta", font=("Segoe UI", 9))
         self.status_label.pack(pady=5)
-        
-        self.tree.tag_configure('atrasado',     background="#FFD9D9")    
-        self.tree.tag_configure('hoje',         background="#B7D5F5")        
-        self.tree.tag_configure('proximo',      background="#E2FFD3")  
         
         self.load_all_records()
         
@@ -3950,170 +383,62 @@ class DatabaseViewer6: ### VISTA GERAL
             context_menu = tk.Menu(self.tree, tearoff=0)
             
             values = self.tree.item(item)['values']
-            sharepoint_url = values[0] if values and len(values) > 0 else ""
-            setor_teams = values[5]
-            if sharepoint_url:
-                context_menu.add_command(label="Abrir link do Sharepoint no navegador", command=lambda u=sharepoint_url: self.open_sharepoint_link(u))
-                context_menu.add_separator()
-                context_menu.add_command(label=f"Iniciar chat do Teams com {setor_teams}",command=lambda i=item: self.open_teams_chat(i))
-                context_menu.add_separator()
-                context_menu.add_command(label="Copiar link", command=lambda u=sharepoint_url: self.copy_to_clipboard(u))
-                context_menu.add_command(label="Copiar linha", command=lambda i=item: self.copy_row_data(i))
-                #context_menu.add_separator()
-                #context_menu.add_command(label="Enviar para impressora Zebra [Em desenvolvimento]", command=lambda: self.send_to_printer(self.tree.item(item)['values']))
+            line = values[2] if values and len(values) > 0 else ""
+
+            if values[2]:
+                #context_menu.add_command(label="Abrir link do Sharepoint no navegador", command=lambda: self.open_sharepoint_link(line))
+                
+                if values[3] == "":
+                    context_menu.add_command(label="Copiar declaração de rastreabilidade metrológica", command=lambda: self.copy_to_clipboard(line))
+                    #context_menu.add_separator()
+                    #context_menu.add_command(label="Copiar linha", command=lambda: self.copy_row_data(item))
+
+            #context_menu.add_separator()
             
-            context_menu.post(event.x_root, event.y_root)               
-            context_menu.add_separator()            
             context_menu.post(event.x_root, event.y_root)
 
-    def scroll_to_today(self, offset=0):
-        target_item = None
-        target_index = 0
-        all_items = self.tree.get_children()
-        
-        for i, item in enumerate(all_items):
-            values = self.tree.item(item)['values']
-            status = values[3] if len(values) > 3 else ""
-            if status == "Hoje":
-                target_item = item 
-                target_index = i
-                break
-            elif status == "Esta semana":
-                target_item = item 
-                target_index = i
-                break
-        
-        if not target_item:
-            for i, item in enumerate(all_items):
-                values = self.tree.item(item)['values']
-                status = values[3] if len(values) > 3 else ""
-                if status == "Atraso":
-                    target_item = item
-                    target_index = i
-                    break
-        
-        if target_item:
-            new_index = max(0, min(target_index + offset, len(all_items) - 1))
-            target_item = all_items[new_index]
-            
-            # Select the item first
-            self.tree.selection_set(target_item)
-            self.tree.focus(target_item)
-            
-            # Then scroll it to the top
-            self.tree.yview_moveto(new_index / len(all_items))
-
-    def find_chat_id(self, chat_name):
-        
-        if not chat_name:
-            return ""
-        
-        # First try exact match
-        if chat_name in self.teams_chat_ids:
-            return self.teams_chat_ids[chat_name]
-        
-        # Split the search term into words
-        search_words = chat_name.lower().split()
-        
-        # Try to find a match by checking if all search words appear in any key
-        for key, chat_id in self.teams_chat_ids.items():
-            key_lower = key.lower()
-            
-            # Check if ALL search words are in the key (strong match)
-            if all(word in key_lower for word in search_words):
-                return chat_id
-        
-        # If still no match, try partial matching (at least one significant word)
-        significant_words = [w for w in search_words if len(w) > 3]  # Skip short words like "de", "da", "por"
-        
-        if significant_words:
-            for key, chat_id in self.teams_chat_ids.items():
-                key_lower = key.lower()
-                
-                # Check if at least half of significant words match
-                matches = sum(1 for word in significant_words if word in key_lower)
-                if matches >= len(significant_words) / 2:
-                    return chat_id
-        
-        return ""
-    
-    def open_teams_chat(self, item):
-        try:
-            values = self.tree.item(item)['values']
-            
-            if values:
-                chat_name = values[5] if len(values) > 5 else ""
-                
-                # Use the search method to find the chat_id
-                chat_id = self.find_chat_id(chat_name)
-                
-                temp_data = {
-                    'row_text': "\n".join([f"{val}" for val in values]),
-                    'values': values,
-                    'chat_name': chat_name,
-                    'chat_id': chat_id,
-                    'item_id': item
-                }
-                
-                if temp_data['chat_id']:
-                    #link = f"https://teams.cloud.microsoft/l/chat/19:{temp_data['chat_id']}@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
-                    link = f"https://teams.cloud.microsoft/l/chat/19:fc9176a569904180bbfa3eeb1bd52651@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
-                    webbrowser.open(link)
-                else:
-                    
-                    #print(f"Available chat names: {list(self.teams_chat_ids.keys())}")
-                    messagebox.showwarning("Aviso", f"Chat ID não encontrado para: {chat_name}")
-                        
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao abrir chat:\n{str(e)}")
-
-    def send_to_printer(self,values):
-        print('send_to_printer')
-
     def open_sharepoint_link(self, url):
-        url = self.get_sharepoint_url(url)
         try:
             webbrowser.open(url)
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao abrir o link:\n{str(e)}")
             self.status_label.config(text="Falha ao abrir link")
-            
-    def get_sharepoint_url(self, os_code):
-        if not os_code:
-            return ""
-        os_year = os_code[-4:]
-        os_parts = os_code.split('/')
-        os_code_num = os_parts[0].lstrip('0')
-        os_code_num = format_os_code(os_code_num) if os_code_num else ""
-        return f"https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Atendimento%20ao%20Cliente/E%20-%20Ordens%20de%20Servi%C3%A7o/{os_year}/{os_code_num}"
-    
 
     def copy_to_clipboard(self, text):
         
         try:
             self.frame_certificados.clipboard_clear()
-            self.frame_certificados.clipboard_append(self.get_sharepoint_url(text))
-            self.status_label.config(text="Link copiado para a área de transferência!")
-            messagebox.showinfo("Sucesso", "Link copiado para a área de transferência!")
+            self.frame_certificados.clipboard_append(text)
+            self.status_label.config(text="Declaração de rastreabilidade metrológica copiada para a área de transferência!")
+            messagebox.showinfo("Sucesso", "Declaração de rastreabilidade metrológica copiada para a área de transferência!")
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao copiar:\n{str(e)}")
 
-    def copy_row_data(self, item):
-        
-        try:
-            values = self.tree.item(item)['values']
-
-            if values:
-                
-
-                row_text = "\n".join([f"{val}" for val in values])
-                
-                self.frame_certificados.clipboard_clear()
-                self.frame_certificados.clipboard_append(row_text)
-                self.status_label.config(text="Linha copiada para a área de transferência!")
-                messagebox.showinfo("Sucesso", "Dados da linha copiados para a área de transferência!")
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao copiar linha:\n{str(e)}")
+    #def copy_row_data(self, item):
+    #    
+    #    try:
+    #        values = self.tree.item(item)['values']
+    #        if values:
+    #            
+    #            os_year = values[1][-2:]
+    #            
+    #            os_parts = values[1].split('/')
+    #            
+    #            os_code = os_parts[0].lstrip('0')
+    #            if len(os_code) == 4:                
+    #                values[1] = f"{os_code}/{os_year}"
+    #            else:
+    #                values[1] = f"0{os_code}/{os_year}"
+    #            print(values[1])
+#
+    #            row_text = "\n".join([f"{val}" for val in values])
+    #            
+    #            self.frame_certificados.clipboard_clear()
+    #            self.frame_certificados.clipboard_append(row_text)
+    #            self.status_label.config(text="Linha copiada para a área de transferência!")
+    #            messagebox.showinfo("Sucesso", "Dados da linha copiados para a área de transferência!")
+    #    except Exception as e:
+    #        messagebox.showerror("Erro", f"Falha ao copiar linha:\n{str(e)}")
 
     def select_all_rows(self):
         
@@ -4125,43 +450,48 @@ class DatabaseViewer6: ### VISTA GERAL
         ##self.btn_gerar.config(state="enabled")
         self.btn_visualizar.config(state="enabled")
         self.btn_limpar.config(state="enabled")
-
-    def execute_query(self, where_clause=None,groupby_clause=None):
+    
+    def execute_query(self, where_clause=None):
         try:
             conn = win32com.client.Dispatch("ADODB.Connection")
             rs = win32com.client.Dispatch("ADODB.Recordset")
             
             conn.Open(self.str_conn)
             
-            sql = """
-              
-            SELECT 
-                os.code 'OS',
-                CONVERT(VARCHAR(10), os.receiving_date, 103) as 'Recebimento',
-                CONVERT(VARCHAR(10), os.date_finished, 103) as 'Entrega',
-                CASE 
-                    WHEN datediff(d, os.date_finished, GETDATE()) = 0 THEN 'Hoje'
-                    WHEN datediff(d, os.date_finished, GETDATE()) > 0 THEN 'Atraso'
-                    WHEN os.date_finished >= DATEADD(wk, DATEDIFF(wk, 0, GETDATE()), 0) AND os.date_finished < DATEADD(wk, DATEDIFF(wk, 0, GETDATE()) + 1, 0) THEN 'Esta semana'
-                    WHEN os.date_finished >= DATEADD(wk, DATEDIFF(wk, 0, GETDATE()) + 1, 0) AND os.date_finished < DATEADD(wk, DATEDIFF(wk, 0, GETDATE()) + 2, 0) THEN 'Próxima semana'
-                    ELSE 'Futuro'
-                END as 'Status',
-                i.code as 'Item',
-                s.name as 'Setor'
-            FROM sectors s
-            LEFT JOIN instruments i ON i.id_current_sector = s.id
-            LEFT JOIN orders_services os ON os.id = i.id_service_order
+            sql = """select
+            
+            s.code as 'standard',
+            it.name as 's_instrument_type',
+            --concat(it.name,' ',im.name,' – ',s.code,' – Certificado de Calibração ',last_cal.certificate_code,' emitido por ',sup_cal.name,' – Válido até ',RIGHT(CONVERT(VARCHAR(10), s.next_calibration, 103), 7)) as 'traceability',
+            concat(it.name,' – ',s.code,' – certificado de calibração ',last_cal.certificate_code,' emitido por ',sup_cal.name,', válido até ',RIGHT(CONVERT(VARCHAR(10), s.next_calibration, 103), 7)) as 'traceability',
+            case when s.next_calibration is null or sec.name is null or last_cal.certificate_code is null or sup_cal.name is null or s.next_calibration < GETDATE() or s.is_active = 0 then 'Fora de uso' end as 'status',
+            --SE O PADRÃO TÁ VENCIDO
+            --SE O PADRÃO ESTIVER INATIVO
+            --SE O PADRÃO NÃO TEM DATA DA PRÓXIMA CALIBRAÇÃO
+            --SE O PADRÃO NÃO TEM SETOR RESPONSÁVEL
+            --SE O PADRÃO NÃO TEM CERTIFICADO DE CALIBRAÇÃO NENHUM
+            -- >>>>FORA DE USO
+            CONVERT(VARCHAR(10), s.next_calibration, 103) AS 's_next_calibration',
+            sec.name as 's_sector',
+            case when s.is_active = 1 then 'Ativo' else 'Inativo' end as 'Status',
+            last_cal.certificate_code as 'sc_certificate_code',
+            sup_cal.name as 'sc_supplier'
 
+            from standards as s
+            left join instrument_types it on it.id = s.id_instrument_type
+            left join instruments_models im on im.id = s.id_model
+            left join suppliers sup on sup.id = s.id_supplier_calibration
+            left join sectors sec on sec.id = s.id_current_sector
+
+            left join (select sc.id_standard,max(sc.id) as max_sc_id from standards_calibrations sc where sc.removed=0 group by sc.id_standard) latest_cal_id on latest_cal_id.id_standard = s.id
+            left join standards_calibrations last_cal on last_cal.id = latest_cal_id.max_sc_id
+            left join suppliers sup_cal on sup_cal.id = last_cal.id_supplier
             """
-
-    #############
+            
             if where_clause:
                 sql += f" WHERE {where_clause}"
             
-            if groupby_clause:
-                sql += f" GROUP BY {groupby_clause}"
-            
-            sql += " ORDER BY os.date_finished ASC"
+            sql += " order by s.code desc"
             
             rs.Open(sql, conn)
             
@@ -4173,12 +503,10 @@ class DatabaseViewer6: ### VISTA GERAL
                     for i in range(rs.Fields.Count):
                         value = rs.Fields(i).Value
                         row.append(value if value is not None else "")
-                        
-                    os_parts = row[0].split('/')
-                    os_code = os_parts[0].lstrip('0')
-                    os_code = f"{os_code}/{os_parts[1]}"
-                    row[0] = os_code
-
+                    #os_year = row[1][-4:]
+                    #os_code = row[1].split('/')
+                    #os_code = os_code[0].lstrip('0')
+                    #os_code = format_os_code(os_code)
                     #row[0] = f"https://sesirs.sharepoint.com/:f:/r/sites/gdms-ISISistemasdeSensoriamento/Documentos%20Compartilhados/ISI%20SIM%20-%20Metrologia/Atendimento%20ao%20Cliente/E%20-%20Ordens%20de%20Servi%C3%A7o/{row[0]}{os_year}/{os_code}"
                     
                     results.append(row)
@@ -4194,129 +522,85 @@ class DatabaseViewer6: ### VISTA GERAL
             return []
         
     def load_all_records(self):
-        self.status_label.config(text="Carregando Ordens de Serviço...", font=("Segoe UI", 12))
-        
-        #self.status_label.config(text=f"Os dados são inválidos", font=("Segoe UI", 12))
+        self.status_label.config(text="Carregando certificados...", font=("Segoe UI", 12))
         self.frame_certificados.update()
         
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        where_clause = " i.removed = 0 AND os.removed = 0 AND s.id IN (2,5,6,7,8,9,11,25,1026,2030,2033,15,16,2029) AND os.receiving_date > '20250101'"
-        groupby_clause = "s.name, s.id, os.code, os.receiving_date, os.date_finished, i.code"
+        where_clause = "s.removed = 0"
         
-        results = self.execute_query(where_clause,groupby_clause)
-        
-        #for row in results:
-        #    self.tree.insert("", "end", values=row)
-        
-        self.status_label.config(text=f"")
-        #self.status_label.config(text=f"Os dados são inválidos")
-        
-        #self.tree.tag_configure('atrasado',     background="#FFD9D9")    
-        #self.tree.tag_configure('hoje',         background="#B7D5F5")        
-        #self.tree.tag_configure('proximo',      background="#E2FFD3")  
+        results = self.execute_query(where_clause)
         
         for row in results:
-            
-            if row[3] == "Atraso":
-                item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Atraso',))
-                self.tree.tag_configure('Atraso', background="#FFD9D9") 
+            if row[3] == "Fora de uso":
+                #self.tree.insert("", "end", values=row, tags=('red_bg',))
                 
-            elif row[3] == "Hoje":
                 item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Hoje',))
-                self.tree.tag_configure('Hoje', background="#98C0EB") 
-
-            elif row[3] == "Esta semana":
-                item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Esta semana',))
-                self.tree.tag_configure('Esta semana', background="#B7D5F5") 
-            
-            elif row[3] == "Próxima semana":
-                item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Próximo',))
-                self.tree.tag_configure('Próximo', background="#D4E4F5")
-
-            elif row[3] == "Futuro":
-                item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Futuro',))
-                self.tree.tag_configure('Futuro', background="#E4EEF8")
-            
+                self.tree.item(item_id, tags=('fora_de_uso',))
+                
+                self.tree.tag_configure('fora_de_uso', background='#FFD9D9')
             else:
                 self.tree.insert("", "end", values=row)
-    
+        
+        self.status_label.config(text=f"{len(results)} padrões encontrados")
+
     def perform_search(self):
+        
         search_term = self.search_entry.get().strip()
         
+        if search_term == "Digite sua busca...":
+            return
+
         if not search_term:
             self.load_all_records()
             return
         
-        #self.status_label.config(text=f"Buscando por '{search_term}'...")
-        self.status_label.config(text=f"A busca de dados é inválida")
+        self.status_label.config(text=f"Buscando por '{search_term}'...")
         self.frame_certificados.update()
         
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        where_clause = f"(i.code LIKE '%{search_term}%' or s.name LIKE '%{search_term}%' or os.code LIKE '%{search_term}%') AND s.removed = 0 AND i.removed = 0 AND os.removed = 0 AND s.id IN (2,5,6,7,8,9,11,25,1026,2030,2033,15,16,2029) AND os.receiving_date > '20250101'"
-
-        groupby_clause = " s.name, s.id, os.code, os.receiving_date, os.date_finished, i.code"
-        #where_clause = f""
+        where_clause = f"(it.name LIKE '%{search_term}%' or s.code LIKE '%{search_term}%' or sup.name LIKE '%{search_term}%' or sec.name LIKE '%{search_term}%') and s.removed = 0 "
+        #where_clause = f"(it.name LIKE '%{search_term}%' or s.code LIKE '%{search_term}%' and s.removed = 0 and it.removed = 0 and im.removed = 0 and sup.removed = 0 and sec.removed = 0)"
         
-        results = self.execute_query(where_clause,groupby_clause)
-                
+        results = self.execute_query(where_clause)
+        
         for row in results:
-            
-            if row[3] == "Atraso":
+            if row[3] == "Fora de uso":
                 item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Atraso',))
-                self.tree.tag_configure('Atraso', background="#FFD9D9") 
+                self.tree.item(item_id, tags=('fora_de_uso',))
                 
-            elif row[3] == "Hoje":
-                item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Hoje',))
-                self.tree.tag_configure('Hoje', background="#98C0EB") 
-
-            elif row[3] == "Esta semana":
-                item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Esta semana',))
-                self.tree.tag_configure('Esta semana', background="#B7D5F5") 
-            
-            elif row[3] == "Próxima semana":
-                item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Próximo',))
-                self.tree.tag_configure('Próximo', background="#D4E4F5")
-
-            elif row[3] == "Futuro":
-                item_id = self.tree.insert("", "end", values=row)
-                self.tree.item(item_id, tags=('Futuro',))
-                self.tree.tag_configure('Futuro', background="#E4EEF8")
-            
+                self.tree.tag_configure('fora_de_uso', background='#FFD9D9')
             else:
                 self.tree.insert("", "end", values=row)
-    
-        self.status_label.config(text=f"Encontrados {len(results)} itens para '{search_term}'")
-        #self.status_label.config(text=f"Os dados são inválidos")
-    
+
+        if len(results) == 0:
+            self.status_label.config(text=f"Nenhum padrão encontrado para '{search_term}'")
+        if len(results) == 1:
+            self.status_label.config(text=f"{len(results)} padrões encontrados para '{search_term}'")
+        if len(results) > 1:
+            self.status_label.config(text=f"{len(results)} padrões para '{search_term}'")
     
     def on_select(self, event):
         selected = self.tree.selection()
         if len(selected) > 1:
-            self.status_label.config(text=f"{len(selected)} itens selecionados")
+            self.status_label.config(text=f"{len(selected)} padrões selecionados")
+            #self.btn_gerar.config(state="enabled")
             self.btn_visualizar.config(state="enabled")
             self.btn_limpar.config(state="enabled")
-        elif len(selected) == 1:
-            self.status_label.config(text=f"{len(selected)} item selecionado")
+
+        if len(selected) == 1:
+            self.status_label.config(text=f"{len(selected)} padrão selecionado")
             self.btn_visualizar.config(state="enabled")
             self.btn_limpar.config(state="enabled")
-        else:
-            self.status_label.config(text=f"Nenhum item selecionado")
+
+        if len(selected) == 0:
+            self.status_label.config(text=f"Nenhum padrão selecionado")
             self.btn_visualizar.config(state="disabled")
             self.btn_limpar.config(state="disabled")
-    
+
     def get_selected_data(self):
         selected_items = self.tree.selection()
         selected_data = []
@@ -4324,14 +608,17 @@ class DatabaseViewer6: ### VISTA GERAL
         for item in selected_items:
             values = self.tree.item(item)['values']
             selected_data.append({
-                'sharepoint': f"{values[0]}/Cliente",
-                'ordem_servico': values[1].lstrip('0'),
-                'certificado': values[2],
-                'item': values[3],
-                'data_calibracao': values[4],
-                'cliente': values[5]
+                'standard':             values[0],
+                'instrument_type':      values[1],
+                'traceability':         values[2],
+                'status':               values[3],
+                's_next_calibration':   values[4],
+                's_sector':             values[5],
+                'Status':               values[6],
+                'sc_certificate_code':  values[7],
+                'sc_supplier':          values[8]
             })
-        
+
         return selected_data
     
     def print_selected(self):
@@ -4342,10 +629,9 @@ class DatabaseViewer6: ### VISTA GERAL
             return
         
         print_window = tk.Toplevel(self.frame_certificados)
-        print_window.title("Registros Selecionados")
+        print_window.title("Padrões selecionados")
         print_window.geometry("900x500")
         print_window.configure(bg=self.cor_fundo)
-        print_window.transient(self.frame_certificados)
         
         #title_label = tk.Label(print_window, text="VISUALIZAÇÃO DE DADOS", font=("Segoe UI", 12, "bold"), bg=self.cor_fundo, fg="white")
         #title_label.pack(pady=35)
@@ -4365,77 +651,225 @@ class DatabaseViewer6: ### VISTA GERAL
         output_text += f"{'='*70}\n\n"
         
         for i, item in enumerate(selected_data, 1):
-            output_text += f"Certificado n° {item['certificado']}:\n\n"
+            output_text += f"Padrão {item['standard']}:\n"
+             
+            output_text += f"{item['traceability']}\n"
             
-            output_text += f"{item['sharepoint']}\n"
-            output_text += f"{item['ordem_servico']}\n"
-            output_text += f"{item['certificado']}\n"
-            output_text += f"{item['item']}\n"
-            output_text += f"{item['data_calibracao']}\n"
-            output_text += f"{item['cliente']}\n"
+            #output_text += f"Instrumento: {item['instrument_type']}\n"
+            output_text += f"\n\n"
+            if item['status'] == "":
+                output_text += f">>> Status da Declaração de rastreabilidade metrológica: OK\n"
+            else:
+                output_text += f">>> Status da Declaração de Rastreabilidade metrológica: {item['status']}\n"
             
+            if item['s_sector'] == "":
+                output_text += f">>> Não há setor responsável cadastrado neste padrão\n"
+            else:
+                output_text += f">>> Setor responsável: {item['s_sector']}\n"
+                
+            if item['Status'] == "Inativo":
+                output_text += f">>> Padrão inativo\n"
+
+            if item['sc_certificate_code'] == "":
+                output_text += f">>> Não há certificado cadastrado neste padrão\n"
+            if item['sc_supplier'] == "":
+                output_text += f">>> Não há fornecedor cadastrado no certificado deste padrão\n"
+
             output_text += f"{'-'*40}\n\n"
 
         text_widget.insert("1.0", output_text)
         text_widget.config(state="disabled")
         
+    def export_selected(self):
+        selected_data = self.get_selected_data()
+        
+        if not selected_data:
+            messagebox.showinfo("Aviso", "Nenhum item selecionado para exportar.")
+            return
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"certificados SELECIONADOS{timestamp}.txt"
+        
+        try:
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write("="*70 + "\n")
+                f.write("EXPORTAÇÃO DE DADOS - SISTEMA DE CALIBRAÇÕES\n")
+                f.write(f"Data/Hora da exportação: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n")
+                f.write(f"Total de certificados exportados: {len(selected_data)}\n")
+                f.write("="*70 + "\n\n")
+                
+                for i, item in enumerate(selected_data, 1):
+                    f.write(f"REGISTRO {i}:\n")
+                    f.write(f"  Ordem de Serviço: {item['ordem_servico']}\n")
+                    f.write(f"  Certificado: {item['certificado']}\n")
+                    f.write(f"  Item: {item['item']}\n")
+                    f.write(f"  Data da Calibração: {item['data_calibracao']}\n")
+                    f.write(f"  Data da Calibração: {item['cliente']}\n")
+                    f.write("-"*40 + "\n\n")
+            
+            messagebox.showinfo("Sucesso", f"Dados exportados com sucesso para:\n{filename}")
+            self.status_label.config(text=f"Exportado para {filename}")
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao exportar dados:\n{str(e)}")
+    
     def clear_selection(self):
         for item in self.tree.selection():
             self.tree.selection_remove(item)
         self.status_label.config(text="Seleção limpa")
 
 
-class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
+def insert_protocol_and_get_id(str_conn, user_name, client_name='', budget_code='', service_order_code='', pdf_filename=''):
+    """
+    Insert a new protocol record and return the generated ID as the protocol code
+    Returns: dict with 'id', 'protocol_code', or None if failed
+    """
+    try:
+        conn = win32com.client.Dispatch("ADODB.Connection")
+        rs = win32com.client.Dispatch("ADODB.Recordset")
+        
+        conn.Open(str_conn)
+        print('conn.Open(str_conn)', str_conn)
+        
+        # Escape single quotes in strings
+        safe_client = client_name.replace("'", "''") if client_name else ''
+        safe_budget = budget_code.replace("'", "''") if budget_code else ''
+        safe_order = service_order_code.replace("'", "''") if service_order_code else ''
+        safe_filename = pdf_filename.replace("'", "''") if pdf_filename else ''
+        # Insert the record with a temporary protocol code
+
+        insert_sql = f"""
+            INSERT INTO Receipt_Protocols 
+            (protocol_code, insert_date, user_name, client_name, budget_code, service_order_code, pdf_filename)
+            VALUES (
+                'TEMP',
+                GETDATE(),
+                '{user_name}',
+                '{safe_client}',
+                '{safe_budget}',
+                '{safe_order}',
+                '{safe_filename}'
+            )
+        """
+
+        conn.Execute(insert_sql)
+
+        # Now get the last inserted ID
+        rs.Open("SELECT SCOPE_IDENTITY() as new_id", conn)
+
+        new_id = None
+        if not rs.EOF:
+            new_id = rs.Fields('new_id').Value
+        rs.Close()
+
+        if new_id is None:
+            conn.Close()
+            print("Erro: Não foi possível obter o ID do registro inserido")
+            return None
+
+        # Format protocol code using the ID with leading zeros
+        protocol_code = f"{int(new_id)}"
+
+        # Update the record with the proper protocol code
+        update_sql = f"""
+            UPDATE Receipt_Protocols 
+            SET protocol_code = '{protocol_code}'
+            WHERE id = {int(new_id)}
+        """
+        conn.Execute(update_sql)
+        
+        
+        # Now get the last inserted ID
+        rs.Open("SELECT SCOPE_IDENTITY() as new_id", conn)
+        
+        new_id = None
+        if not rs.EOF:
+            new_id = rs.Fields('new_id').Value
+        rs.Close()
+        
+        if new_id is None:
+            conn.Close()
+            print("Erro: Não foi possível obter o ID do registro inserido")
+            return None
+        
+        # Format protocol code using the ID with leading zeros
+        protocol_code = f"{int(new_id)}"
+        
+        # Update the record with the formatted protocol code
+        update_sql = f"""
+            UPDATE Receipt_Protocols 
+            SET protocol_code = '{protocol_code}'
+            WHERE id = {int(new_id)}
+        """
+        conn.Execute(update_sql)
+        
+        conn.Close()
+        
+        print(f"Protocolo inserido: ID={new_id}, Código={protocol_code}")
+        
+        return {
+            'id': int(new_id),
+            'protocol_code': protocol_code
+        }
+        
+    except Exception as e:
+        print(f"Erro ao inserir protocolo: {str(e)}")
+        messagebox.showerror("Erro", f"Falha ao registrar protocolo:\n{str(e)}")
+        try:
+            conn.Close()
+        except:
+            pass
+        return None
+
+class ProtocolViewer: ### VISUALIZADOR DE PROTOCOLOS
     
     def __init__(self, parent_notebook, str_conn, cor_fundo):
         self.str_conn = str_conn
         self.cor_fundo = cor_fundo
-        self.selected_items = []
-        self.frame_certificados = ttk.Frame(parent_notebook)
-        parent_notebook.add(self.frame_certificados, text=" Orçamentos ")
+        self.frame_protocolos = ttk.Frame(parent_notebook)
+        parent_notebook.add(self.frame_protocolos, text=" Lista de Recebimento ")
         
         self.setup_ui()
     
-    def on_entry_focus_in(self, event):
-        if self.search_entry.get() == self.placeholder_text:
-            self.search_entry.delete(0, 'end')
-            self.search_entry.configure(style='TEntry')
-
-    def on_entry_focus_out(self, event):
-        if not self.search_entry.get():
-            self.search_entry.insert(0, self.placeholder_text)
-            style = ttk.Style()
-            self.search_entry.configure(style='Placeholder.TEntry')
-        
     def setup_ui(self):
-        search_frame = ttk.Frame(self.frame_certificados)
+        # Search frame
+        search_frame = ttk.Frame(self.frame_protocolos)
         search_frame.pack(pady=10, padx=10, fill="x")
         
-        self.greetings = ttk.Label(search_frame, text=f"{buenas}", font=("Segoe UI", 10), background='black')
-        self.greetings.pack(side="left", padx=5)
+        ttk.Label(search_frame, text="Buscar DRs:").pack(side="left", padx=5)
         
-        # Search by customer name
-        tk.Label(search_frame, text="Cliente:", font=('Segoe UI', 9), 
-                bg=self.cor_fundo, fg='white').pack(side="left", padx=(10, 5))
-        
-        self.search_entry = ttk.Entry(search_frame, width=40)
+        self.search_entry = ttk.Entry(search_frame, width=30)
         self.search_entry.pack(side="left", padx=5)
         self.search_entry.bind('<Return>', lambda e: self.perform_search())
-
+        
+        # Placeholder
+        self.placeholder_text = "Buscar por código, cliente, OS..."
+        self.search_entry.insert(0, self.placeholder_text)
         style = ttk.Style()
         style.configure('Placeholder.TEntry', foreground='#7D7D7D')
-
-        self.placeholder_text = "Digite o nome do cliente..."
-        self.search_entry.insert(0, self.placeholder_text)
         self.search_entry.configure(style='Placeholder.TEntry')
-
         self.search_entry.bind('<FocusIn>', self.on_entry_focus_in)
         self.search_entry.bind('<FocusOut>', self.on_entry_focus_out)
-
+        
         ttk.Button(search_frame, text="Buscar", command=self.perform_search).pack(side="left", padx=5)
         ttk.Button(search_frame, text="Mostrar Todos", command=self.load_all_records).pack(side="left", padx=5)
-
-        tree_frame = ttk.Frame(self.frame_certificados)
+        ttk.Button(search_frame, text="Atualizar", command=self.load_all_records).pack(side="left", padx=5)
+        
+        # Date filter
+        #ttk.Label(search_frame, text="De:").pack(side="left", padx=(20, 2))
+        #self.date_from = ttk.Entry(search_frame, width=12)
+        #self.date_from.pack(side="left", padx=2)
+        #self.date_from.insert(0, (datetime.now() - timedelta(days=30)).strftime('%d/%m/%Y'))
+        
+        #ttk.Label(search_frame, text="Até:").pack(side="left", padx=2)
+        #self.date_to = ttk.Entry(search_frame, width=12)
+        #self.date_to.pack(side="left", padx=2)
+        #self.date_to.insert(0, datetime.now().strftime('%d/%m/%Y'))
+        
+        #ttk.Button(search_frame, text="Filtrar por Data", command=self.filter_by_date).pack(side="left", padx=5)
+        
+        # Tree frame
+        tree_frame = ttk.Frame(self.frame_protocolos)
         tree_frame.pack(pady=10, padx=10, expand=True, fill="both")
         
         tree_scroll_y = ttk.Scrollbar(tree_frame)
@@ -4445,16 +879,13 @@ class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
         tree_scroll_x.pack(side="bottom", fill="x")
         
         columns = (
+            "Número",
+            "Data de Inserção",
+            "Usuário",
             "Cliente",
-            "Instrumento",
-            "Código",
-            "Modelo",
-            "Nº Série",
-            "Serviço",
-            "Aprovação",
             "Orçamento",
-            "Valor (R$)",
-            #"Desconto (%)"
+            "Ordem de Serviço",
+            "Arquivo PDF"
         )
         
         self.tree = ttk.Treeview(
@@ -4470,72 +901,47 @@ class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
         tree_scroll_x.config(command=self.tree.xview)
         
         column_widths = {
-            "Instrumento": 120,
-            "Código": 80,
-            "Modelo": 100,
-            "Nº Série": 80,
-            "Serviço": 180,
-            "Aprovação": 80,
-            "Orçamento": 80,
-            "Valor (R$)": 80,
-            #"Desconto (%)": 80
+            "Número": 150,
+            "Data de Inserção": 130,
+            "Usuário": 100,
+            "Cliente": 200,
+            "Orçamento": 100,
+            "Ordem de Serviço": 100,
+            "Arquivo PDF": 150
         }
         
         for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=column_widths.get(col, 80), minwidth=50)
+            self.tree.heading(col, text=col, command=lambda c=col: self.sort_column(c))
+            self.tree.column(col, width=column_widths.get(col, 100), minwidth=50)
         
         self.tree.pack(expand=True, fill="both")
         
+        # Right-click menu
         self.tree.bind('<Button-3>', self.show_context_menu)
-        self.tree.bind('<<TreeviewSelect>>', self.on_select)
         
-        button_frame = ttk.Frame(self.frame_certificados)
-        button_frame.pack(pady=10, padx=10, fill="x")
-        self.btn_visualizar = ttk.Button(button_frame, text="Visualizar Selecionado(s)", command=self.print_selected)
-        self.btn_visualizar.pack(side="left", padx=5)
-        self.btn_visualizar.config(state="disabled")
-
-        self.btn_limpar = ttk.Button(button_frame, text="Limpar Seleção", command=self.clear_selection)
-        self.btn_limpar.pack(side="left", padx=5)
-        self.btn_limpar.config(state="disabled")
-
-        self.status_label = ttk.Label(self.frame_certificados, text="Busque por um cliente para visualizar orçamentos", font=("Segoe UI", 9))
+        # Status bar
+        self.status_label = ttk.Label(
+            self.frame_protocolos, 
+            text="Pronto para consulta", 
+            font=("Segoe UI", 9)
+        )
         self.status_label.pack(pady=5)
-    
-    def show_context_menu(self, event):
-        item = self.tree.identify_row(event.y)
         
-        if item:
-            self.tree.selection_set(item)
-            
-            context_menu = tk.Menu(self.tree, tearoff=0)
-            
-            context_menu.add_command(label="Visualizar Selecionado", command=self.print_selected)
-            context_menu.add_command(label="Copiar linha", command=lambda i=item: self.copy_row_data(i))
-            
-            context_menu.post(event.x_root, event.y_root)
-
-    def copy_to_clipboard(self, text):
-        try:
-            self.frame_certificados.clipboard_clear()
-            self.frame_certificados.clipboard_append(text)
-            self.status_label.config(text="Copiado!")
-        except Exception:
-            pass
-
-    def copy_row_data(self, item):
-        try:
-            values = self.tree.item(item)['values']
-            row_text = "\n".join([f"{val}" for val in values])
-            self.frame_certificados.clipboard_clear()
-            self.frame_certificados.clipboard_append(row_text)
-            self.status_label.config(text="Linha copiada!")
-            messagebox.showinfo("Sucesso", "Dados da linha copiados!")
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao copiar:\n{str(e)}")
+        # Load all records
+        self.load_all_records()
+    
+    def on_entry_focus_in(self, event):
+        if self.search_entry.get() == self.placeholder_text:
+            self.search_entry.delete(0, 'end')
+            self.search_entry.configure(style='TEntry')
+    
+    def on_entry_focus_out(self, event):
+        if not self.search_entry.get():
+            self.search_entry.insert(0, self.placeholder_text)
+            self.search_entry.configure(style='Placeholder.TEntry')
     
     def execute_query(self, where_clause=None):
+        """Execute query and return results"""
         try:
             conn = win32com.client.Dispatch("ADODB.Connection")
             rs = win32com.client.Dispatch("ADODB.Recordset")
@@ -4544,34 +950,22 @@ class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
             
             sql = """
                 SELECT 
-
-                    c.name AS 'Cliente',
-                    it.name AS 'Instrumento',
-                    i.code AS 'Código',
-                    im.name AS 'Modelo',
-                    i.serial_number AS 'Nº Série',
-                    sm.specification AS 'Serviço',
-                    CONVERT(VARCHAR(10), iss.approve_date, 103) AS 'Aprovação',
-                    b.code AS 'Orçamento',
-                    ROUND((bi.unitary_value - CASE WHEN b.id_discount_type = 1 THEN (bi.unitary_value * bi.discount / 100.0) ELSE 0 END), 2) AS 'Valor'
-                    --((((CASE WHEN b.id_discount_type = 1 THEN (bi.unitary_value * bi.discount / 100.0) ELSE 0 END)/bi.unitary_value)*100), 2) AS 'Desconto'
-
-                FROM instruments i
-                LEFT JOIN instruments_models im ON im.id = i.id_instrument_model
-                LEFT JOIN instrument_types it ON it.id = i.id_instrument_type
-                LEFT JOIN instruments_services iss ON iss.id_instrument = i.id
-                LEFT JOIN service_modes sm ON sm.id = iss.id_service
-                LEFT JOIN budgets_items_details bid ON bid.id = iss.id_budget_item_detail
-                LEFT JOIN budgets_items bi ON bi.id = bid.id_budget_item
-                LEFT JOIN budgets b ON b.id = bi.id_budget
-                LEFT JOIN customers c on c.id = b.id_customer
-                WHERE i.removed = 0
+                
+                    protocol_code,
+                    insert_date,
+                    user_name,
+                    client_name,
+                    budget_code,
+                    service_order_code,
+                    pdf_filename
+                FROM Receipt_Protocols
+                WHERE removed = 0
             """
             
             if where_clause:
                 sql += f" AND {where_clause}"
             
-            sql += " ORDER BY it.name ASC"
+            sql += " ORDER BY insert_date DESC"
             
             rs.Open(sql, conn)
             
@@ -4582,6 +976,12 @@ class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
                     row = []
                     for i in range(rs.Fields.Count):
                         value = rs.Fields(i).Value
+                        # Format date
+                        if i == 1 and value:  # insert_date
+                            try:
+                                value = value.strftime('%d/%m/%Y %H:%M:%S')
+                            except:
+                                pass
                         row.append(value if value is not None else "")
                     results.append(row)
                     rs.MoveNext()
@@ -4594,10 +994,11 @@ class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
         except Exception as e:
             messagebox.showerror("Erro", f"Falha na consulta:\n{str(e)}")
             return []
-        
+    
     def load_all_records(self):
-        self.status_label.config(text="Carregando orçamentos...", font=("Segoe UI", 12))
-        self.frame_certificados.update()
+        """Load all protocol records"""
+        self.status_label.config(text="Carregando protocolos...")
+        self.frame_protocolos.update()
         
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -4606,38 +1007,29 @@ class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
         
         for row in results:
             self.tree.insert("", "end", values=row)
-            
-        if len(results) == 0:
-            self.status_label.config(text="Nenhum orçamento encontrado")
-        elif len(results) == 1:
-            self.status_label.config(text=f"1 orçamento encontrado")
-        else:
-            self.status_label.config(text=f"{len(results)} orçamentos encontrados")
+        
+        #self.status_label.config(text=f"{len(results)} protocolos encontrados")
     
     def perform_search(self):
+        """Search protocols by various fields"""
         search_term = self.search_entry.get().strip()
         
-        if not search_term or search_term == self.placeholder_text:
+        if search_term == self.placeholder_text or not search_term:
             self.load_all_records()
             return
         
         self.status_label.config(text=f"Buscando por '{search_term}'...")
-        self.frame_certificados.update()
+        self.frame_protocolos.update()
         
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        # Search by customer name from the linked server
         where_clause = f"""
-            b.id IN (
-                SELECT b2.id FROM budgets b2
-                LEFT JOIN budgets_items bi2 ON bi2.id_budget = b2.id
-                LEFT JOIN budgets_items_details bid2 ON bid2.id_budget_item = bi2.id
-                LEFT JOIN instruments_services iss2 ON iss2.id_budget_item_detail = bid2.id
-                LEFT JOIN instruments i2 ON i2.id = iss2.id_instrument
-                LEFT JOIN customers c2 ON c2.id = i2.id_customer
-                WHERE c2.name LIKE '%{search_term}%'
-            )
+            (protocol_code LIKE '%{search_term}%' 
+            OR client_name LIKE '%{search_term}%' 
+            OR user_name LIKE '%{search_term}%'
+            OR budget_code LIKE '%{search_term}%'
+            OR service_order_code LIKE '%{search_term}%')
         """
         
         results = self.execute_query(where_clause)
@@ -4645,97 +1037,1344 @@ class DatabaseViewerOrcamentos:  ### ORÇAMENTOS POR CLIENTE
         for row in results:
             self.tree.insert("", "end", values=row)
         
-        self.status_label.config(text=f"Encontrados {len(results)} itens para '{search_term}'")
-    
-    def on_select(self, event):
-        selected = self.tree.selection()
-        if len(selected) > 1:
-            self.status_label.config(text=f"{len(selected)} itens selecionados")
-            self.btn_visualizar.config(state="enabled")
-            self.btn_limpar.config(state="enabled")
-        elif len(selected) == 1:
-            self.status_label.config(text=f"{len(selected)} item selecionado")
-            self.btn_visualizar.config(state="enabled")
-            self.btn_limpar.config(state="enabled")
+        if len(results) == 0:
+            self.status_label.config(text=f"Nenhum protocolo encontrado para '{search_term}'")
+        elif len(results) == 1:
+            self.status_label.config(text=f"{len(results)} protocolo encontrado")
         else:
-            self.status_label.config(text=f"Nenhum item selecionado")
-            self.btn_visualizar.config(state="disabled")
-            self.btn_limpar.config(state="disabled")
+            self.status_label.config(text=f"{len(results)} protocolos encontrados")
     
-    def get_selected_data(self):
-        selected_items = self.tree.selection()
-        selected_data = []
+    def filter_by_date(self):
+        """Filter protocols by date range"""
+        date_from_str = self.date_from.get()
+        date_to_str = self.date_to.get()
         
-        for item in selected_items:
+        try:
+            date_from = datetime.strptime(date_from_str, '%d/%m/%Y')
+            date_to = datetime.strptime(date_to_str, '%d/%m/%Y')
+            
+            # Set time to end of day for date_to
+            date_to = date_to.replace(hour=23, minute=59, second=59)
+            
+            self.status_label.config(text=f"Filtrando de {date_from_str} até {date_to_str}...")
+            self.frame_protocolos.update()
+            
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+            
+            where_clause = f"""
+                insert_date >= '{date_from.strftime('%Y-%m-%d %H:%M:%S')}'
+                AND insert_date <= '{date_to.strftime('%Y-%m-%d %H:%M:%S')}'
+            """
+            
+            results = self.execute_query(where_clause)
+            
+            for row in results:
+                self.tree.insert("", "end", values=row)
+            
+            self.status_label.config(text=f"{len(results)} protocolos no período")
+            
+        except ValueError:
+            messagebox.showerror("Erro", "Formato de data inválido. Use DD/MM/AAAA")
+    
+    def show_context_menu(self, event):
+        """Show right-click context menu"""
+        item = self.tree.identify_row(event.y)
+        
+        if item:
+            self.tree.selection_set(item)
+            
+            context_menu = tk.Menu(self.tree, tearoff=0)
+            
             values = self.tree.item(item)['values']
-            selected_data.append({
-                'cliente':          values[0] if len(values) > 0 else '',
-                'instrumento':      values[1] if len(values) > 1 else '',
-                'codigo':           values[2] if len(values) > 2 else '',
-                'modelo':           values[3] if len(values) > 3 else '',
-                'serie':            values[4] if len(values) > 4 else '',
-                'servico':          values[5] if len(values) > 5 else '',
-                'aprovacao':        values[6] if len(values) > 6 else '',
-                'orcamento':        values[7] if len(values) > 7 else '',
-                #'valor':            round(values[7],2) if len(values) > 7 else '',
-                'valor':            round(values[8],2) if len(values) > 8 else '',
-                #'desconto':         values[8] if len(values) > 8 else ''
-            })
-        
-        return selected_data
+            
+            context_menu.add_command(
+                label="Copiar Protocolo", 
+                command=lambda: self.copy_to_clipboard(values[1])
+            )
+            
+            if values[6]:  # If PDF filename exists
+                context_menu.add_command(label="Copiar Nome do Arquivo", command=lambda: self.copy_to_clipboard(values[7]))
+            
+            context_menu.add_separator()
+            context_menu.add_command(label="Copiar Todos os Dados", command=lambda: self.copy_all_data(item))
+            
+            context_menu.post(event.x_root, event.y_root)
     
-    def print_selected(self):
-        selected_data = self.get_selected_data()
+    def copy_to_clipboard(self, text):
+        """Copy text to clipboard"""
+        try:
+            self.frame_protocolos.clipboard_clear()
+            self.frame_protocolos.clipboard_append(str(text))
+            #self.status_label.config(text="Texto copiado para a área de transferência!")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao copiar:\n{str(e)}")
+    
+    def copy_all_data(self, item):
+        """Copy all row data to clipboard"""
+        try:
+            values = self.tree.item(item)['values']
+            columns = ["Número", "Data de Inserção", "Usuário", 
+                "Cliente", "Orçamento", "Ordem de Serviço", "Arquivo PDF"
+            ]
+            
+            row_text = "\n".join([f"{col}: {val}" for col, val in zip(columns, values)])
+            
+            self.frame_protocolos.clipboard_clear()
+            self.frame_protocolos.clipboard_append(row_text)
+            #self.status_label.config(text="Dados copiados para a área de transferência!")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao copiar:\n{str(e)}")
+    
+    def sort_column(self, col):
+        """Sort tree by column"""
+        # Get all items
+        items = [(self.tree.set(item, col), item) for item in self.tree.get_children('')]
         
-        if not selected_data:
-            messagebox.showinfo("Aviso", "Nenhum item selecionado para visualizar.")
+        # Sort (handles numeric sorting for ID)
+        try:
+            items.sort(key=lambda x: int(x[0]) if x[0].isdigit() else x[0])
+        except:
+            items.sort(key=lambda x: x[0])
+        
+        # Rearrange items
+        for index, (val, item) in enumerate(items):
+            self.tree.move(item, '', index)
+
+class CertificateRequestForm: ### SOLICITAÇÃO DE CERTIFICADO
+    
+    def __init__(self, parent_notebook, str_conn, cor_fundo):
+        self.str_conn = str_conn
+        self.cor_fundo = cor_fundo
+        self.frame_form = ttk.Frame(parent_notebook)
+        parent_notebook.add(self.frame_form, text=" Formulário de Recebimento ")
+        
+        # Load customer list from database
+        self.customers_list = []
+        self.filtered_customers = []
+        self.instruments_list = []
+        self.instrument_types_list = []
+        self.filtered_instrument_types = []
+        self.load_customers()
+        
+        # Budgets and service orders lists
+        self.budgets_list = []
+        self.filtered_budgets = []
+        self.service_orders_list = []
+        self.filtered_service_orders = []
+        
+        # Form variables
+        self.form_data = {
+            'client_name': tk.StringVar(),
+            'budget_code': tk.StringVar(),
+            'service_order_code': tk.StringVar(),
+            'instrument_name': tk.StringVar(),
+            'instrument_model': tk.StringVar(),
+            'instrument_serial': tk.StringVar(),
+            'instrument_tag': tk.StringVar(),
+            'calibration_type': tk.StringVar(),
+            'required_points': tk.StringVar(),
+            'special_requirements': tk.StringVar(),
+            'request_date': tk.StringVar(value=datetime.now().strftime('%d/%m/%Y')),
+            'requested_by': tk.StringVar(value=username),
+            'priority': tk.StringVar(value='Normal')
+        }
+        
+        # Track the currently selected customer ID
+        self.selected_customer_id = None
+        
+        # Track suggestion windows
+        self.suggestion_listbox = None
+        self.suggestion_window = None
+        self.current_suggestion_field = None  # Track which field is showing suggestions
+        
+        self.setup_form_ui()
+
+    def load_instrument_types(self):
+        """Load instrument types from database"""
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            sql = """
+                SELECT DISTINCT 
+                    it.name
+                FROM instrument_types it
+                WHERE it.name IS NOT NULL 
+                    AND it.name != ''
+                    AND it.removed = 0
+                ORDER BY it.name
+            """
+            
+            rs.Open(sql, conn)
+            
+            self.instrument_types_list = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    name = rs.Fields('name').Value
+                    if name:
+                        self.instrument_types_list.append(name)
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            self.filtered_instrument_types = self.instrument_types_list.copy()
+            return self.instrument_types_list
+            
+        except Exception as e:
+            print(f"Erro ao carregar tipos de instrumento: {str(e)}")
+            self.instrument_types_list = []
+            self.filtered_instrument_types = []
+            return []
+
+    def add_instrument(self):
+        """Add instrument to the list"""
+        quantidade = self.entry_quantidade.get().strip()
+        tag = self.entry_tag.get().strip()
+        tipo_item = self.entry_tipo_item.get().strip()
+
+        #if not quantidade:
+        #    messagebox.showwarning("Aviso", "Preencha a quantidade.")
+        #    return
+        #
+        #if not tipo_item:
+        #    messagebox.showwarning("Aviso", "Selecione o tipo de item.")
+        #    return
+        
+        #try:
+        #    quantidade_int = int(quantidade)
+        #    if quantidade_int <= 0:
+        #        raise ValueError
+        #except ValueError:
+        #    messagebox.showwarning("Aviso", "Quantidade deve ser um número inteiro positivo.")
+        #    return
+        
+        # Add to list
+        instrument = { 'quantidade': quantidade if quantidade else '|', 'tag': tag if tag else '|', 'tipo_item': tipo_item if tipo_item else '|' }
+
+        self.instruments_list.append(instrument)
+        
+        self.instruments_tree.insert("", "end", values=(quantidade if quantidade else '|', tag if tag else '|', tipo_item if tipo_item else '|'))
+        
+        # Clear input fields
+        self.entry_quantidade.delete(0, 'end')
+        self.entry_tag.delete(0, 'end')
+        self.entry_tipo_item.delete(0, 'end')
+        
+        # Update status
+        self.update_instruments_count()
+
+    def remove_instrument(self):
+        """Remove selected instrument from the list"""
+        selected = self.instruments_tree.selection()
+        if not selected:
+            messagebox.showwarning("Aviso", "Selecione um item para remover.")
             return
         
-        print_window = tk.Toplevel(self.frame_certificados)
-        print_window.title("Orçamentos Selecionados")
-        print_window.geometry("700x450")
-        print_window.configure(bg=self.cor_fundo)
-        print_window.attributes('-topmost', True)
+        for item in selected:
+            # Get the index of the selected item
+            all_items = self.instruments_tree.get_children()
+            index = all_items.index(item)
+            
+            # Remove from treeview
+            self.instruments_tree.delete(item)
+            
+            # Remove from list
+            if 0 <= index < len(self.instruments_list):
+                self.instruments_list.pop(index)
         
-        text_frame = ttk.Frame(print_window)
-        text_frame.pack(pady=10, padx=10, expand=True, fill="both")
+        self.update_instruments_count()
+
+    def show_instruments_context_menu(self, event):
+        """Show right-click context menu for instruments tree"""
+        item = self.instruments_tree.identify_row(event.y)
         
-        text_widget = tk.Text(text_frame, wrap="word", font=("Consolas", 10), bg='white', fg='black')
-        scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=text_widget.yview)
-        text_widget.configure(yscrollcommand=scrollbar.set)
+        if item:
+            self.instruments_tree.selection_set(item)
+            
+            context_menu = tk.Menu(self.instruments_tree, tearoff=0)
+            context_menu.add_command(label="Remover Item", command=self.remove_instrument)
+            context_menu.post(event.x_root, event.y_root)
+
+    def update_instruments_count(self):
+        """Update the count label for instruments"""
+        count = len(self.instruments_list)
+        if count == 0:
+            self.lbl_instruments_count.config(text="Nenhum item adicionado")
+        elif count == 1:
+            self.lbl_instruments_count.config(text="1 item adicionado")
+        else:
+            self.lbl_instruments_count.config(text=f"{count} itens adicionados")
+
+    def load_customers(self):
+        """Load customer aliases from database"""
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            sql = """
+                SELECT DISTINCT 
+                    c.id,
+                    c.alias
+                FROM  customers c
+                WHERE c.alias IS NOT NULL 
+                    AND c.alias != ''
+                    AND c.removed = 0
+                ORDER BY c.alias
+            """
+            
+            rs.Open(sql, conn)
+            
+            self.customers_list = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    customer = {
+                        'id': rs.Fields('id').Value if rs.Fields('id').Value else None,
+                        'alias': rs.Fields('alias').Value if rs.Fields('alias').Value else ''
+                    }
+                    self.customers_list.append(customer)
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            self.filtered_customers = self.customers_list.copy()
+            #print(f"Carregados {len(self.customers_list)} clientes do banco de dados")
+            
+        except Exception as e:
+            print(f"Erro ao carregar clientes: {str(e)}")
+            self.customers_list = []
+            self.filtered_customers = []
+    
+    def load_budgets_and_orders(self, customer_id):
+        """Load budgets and service orders for a specific customer"""
+        if not customer_id:
+            return
         
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            
+            conn.Open(self.str_conn)
+            
+            # Load budgets for this customer
+            sql_budgets = f"""
+                SELECT DISTINCT 
+                    b.code
+                FROM budgets b
+                WHERE b.id_customer = {customer_id}
+                    AND b.code IS NOT NULL 
+                    AND b.code != ''
+                    AND b.removed = 0
+                ORDER BY b.code
+            """
+            
+            rs.Open(sql_budgets, conn)
+            
+            self.budgets_list = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    budget_code = rs.Fields('code').Value if rs.Fields('code').Value else ''
+                    if budget_code:
+                        self.budgets_list.append(budget_code)
+                    rs.MoveNext()
+            
+            rs.Close()
+            
+            # Load service orders for this customer
+            sql_orders = f"""
+                SELECT DISTINCT 
+                    os.code
+                FROM orders_services os
+                INNER JOIN budgets b ON b.id_order_service = os.id
+                WHERE b.id_customer = {customer_id}
+                    AND os.code IS NOT NULL 
+                    AND os.code != ''
+                    AND os.removed = 0
+                ORDER BY os.code
+            """
+            
+            rs.Open(sql_orders, conn)
+            
+            self.service_orders_list = []
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    order_code = rs.Fields('code').Value if rs.Fields('code').Value else ''
+                    if order_code:
+                        self.service_orders_list.append(order_code)
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+            #print(f"Carregados {len(self.budgets_list)} orçamentos e {len(self.service_orders_list)} ordens de serviço")
+            
+        except Exception as e:
+            print(f"Erro ao carregar orçamentos e ordens: {str(e)}")
+            self.budgets_list = []
+            self.service_orders_list = []
+    
+    def filter_customers(self, search_text):
+        """Filter customers based on search text"""
+        if not search_text or search_text.strip() == '':
+            self.filtered_customers = self.customers_list.copy()
+        else:
+            search_text = search_text.lower().strip()
+            self.filtered_customers = [
+                customer for customer in self.customers_list 
+                if search_text in customer['alias'].lower()
+            ]
+        
+        # Limit results to avoid performance issues
+        if len(self.filtered_customers) > 50:
+            self.filtered_customers = self.filtered_customers[:50]
+    
+    def filter_items(self, items_list, search_text):
+        """Generic filter for budgets and service orders"""
+        if not search_text or search_text.strip() == '':
+            return items_list.copy()
+        else:
+            search_text = search_text.lower().strip()
+            filtered = [item for item in items_list if search_text in str(item).lower()]
+            
+            # Limit results
+            if len(filtered) > 50:
+                filtered = filtered[:50]
+            return filtered
+    
+    def setup_form_ui(self):
+        # Main container with scrollbar
+        main_canvas = tk.Canvas(self.frame_form, bg=self.cor_fundo, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.frame_form, orient="vertical", command=main_canvas.yview)
+        scrollable_frame = ttk.Frame(main_canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: main_canvas.configure(scrollregion=main_canvas.bbox("all"))
+        )
+        
+        main_canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        main_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        main_canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-        text_widget.pack(side="left", expand=True, fill="both")
         
-        output_text = f"{'='*60}\n"
-        output_text += f"ORÇAMENTOS SELECIONADOS\n"
-        output_text += f"Total: {len(selected_data)}\n"
-        output_text += f"{'='*60}\n\n"
         
-        for i, item in enumerate(selected_data, 1):
-            output_text += f"--- Item {i} ---\n\n"
-            output_text += f"Cliente:    {item['cliente']}\n"
-            output_text += f"Instrumento:    {item['instrumento']}\n"
-            output_text += f"Código:         {item['codigo']}\n"
-            output_text += f"Modelo:         {item['modelo']}\n"
-            output_text += f"Nº Série:       {item['serie']}\n"
-            output_text += f"Serviço:        {item['servico']}\n"
-            output_text += f"Aprovação:      {item['aprovacao']}\n"
-            output_text += f"Orçamento:      {item['orcamento']}\n"
-            output_text += f"Valor:          R$ {round(item['valor'],2)}\n"
-            #output_text += f"Desconto:       {item['desconto']}%\n"
-            output_text += f"\n{'-'*40}\n\n"
+                # Bind mouse wheel for scrolling
+        def _on_mousewheel(event):
+            main_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        main_canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
-        text_widget.insert("1.0", output_text)
-        text_widget.config(state="disabled")
-        
-        ttk.Button(print_window, text="Fechar", command=print_window.destroy).pack(pady=(0, 10))
-        
-    def clear_selection(self):
-        for item in self.tree.selection():
-            self.tree.selection_remove(item)
-        self.status_label.config(text="Seleção limpa")
+        # Store the binding for later unbinding
+        self._mousewheel_binding = _on_mousewheel
 
+        # Title
+        title_label = tk.Label(
+            scrollable_frame, 
+            text="ANEXO I - Recebimento e Devolução de Materiais", 
+            font=("Segoe UI", 14, "bold"), 
+            bg=self.cor_fundo, 
+            fg="white"
+        )
+        title_label.pack(pady=(20, 30))
+        
+        # Client Information Section
+        self.create_section(scrollable_frame, "DADOS DO CLIENTE")
+        
+        form_frame = ttk.Frame(scrollable_frame)
+        form_frame.pack(pady=10, padx=20, fill="x")
+        
+        # Row 1: Company Name with Autocomplete
+        ttk.Label(form_frame, text="Nome da empresa:").grid(row=0, column=0, sticky="w", pady=5, padx=5)
+        
+        # Frame for the autocomplete entry
+        name_frame = ttk.Frame(form_frame)
+        name_frame.grid(row=0, column=1, sticky="ew", pady=5, padx=5)
+        
+        # Entry widget
+        self.entry_name = ttk.Entry(name_frame, textvariable=self.form_data['client_name'], width=58)
+        self.entry_name.pack(fill="x")
+        
+        # Bind events for autocomplete
+        self.entry_name.bind('<KeyRelease>', lambda e: self.on_field_keyrelease(e, 'client_name'))
+        self.entry_name.bind('<FocusOut>', self.on_field_focusout)
+        self.entry_name.bind('<Down>', self.on_arrow_down)
+        self.entry_name.bind('<Up>', self.on_arrow_up)
+        self.entry_name.bind('<Return>', self.on_return_key)
+        self.entry_name.bind('<Escape>', self.hide_suggestions)
+        
+        # Row 2: Budget Code with Autocomplete
+        ttk.Label(form_frame, text="Orçamento/Contrato:").grid(row=1, column=0, sticky="w", pady=5, padx=5)
+        
+        budget_frame = ttk.Frame(form_frame)
+        budget_frame.grid(row=1, column=1, sticky="ew", pady=5, padx=5)
+        
+        self.entry_budget = ttk.Entry(budget_frame, textvariable=self.form_data['budget_code'], width=30)
+        self.entry_budget.pack(fill="x")
+        
+        # Bind events for autocomplete
+        self.entry_budget.bind('<KeyRelease>', lambda e: self.on_field_keyrelease(e, 'budget'))
+        self.entry_budget.bind('<FocusOut>', self.on_field_focusout)
+        self.entry_budget.bind('<Down>', self.on_arrow_down)
+        self.entry_budget.bind('<Up>', self.on_arrow_up)
+        self.entry_budget.bind('<Return>', self.on_return_key)
+        self.entry_budget.bind('<Escape>', self.hide_suggestions)
+        self.entry_budget.bind('<FocusIn>', self.on_budget_focusin)
+        
+        # Row 3: Service Order Code with Autocomplete
+        ttk.Label(form_frame, text="Ordem de Serviço:").grid(row=2, column=0, sticky="w", pady=5, padx=5)
+        
+        order_frame = ttk.Frame(form_frame)
+        order_frame.grid(row=2, column=1, sticky="ew", pady=5, padx=5)
+        
+        self.entry_order = ttk.Entry(order_frame, textvariable=self.form_data['service_order_code'], width=30)
+        self.entry_order.pack(fill="x")
+        
+        # Bind events for autocomplete
+        self.entry_order.bind('<KeyRelease>', lambda e: self.on_field_keyrelease(e, 'order'))
+        self.entry_order.bind('<FocusOut>', self.on_field_focusout)
+        self.entry_order.bind('<Down>', self.on_arrow_down)
+        self.entry_order.bind('<Up>', self.on_arrow_up)
+        self.entry_order.bind('<Return>', self.on_return_key)
+        self.entry_order.bind('<Escape>', self.hide_suggestions)
+        self.entry_order.bind('<FocusIn>', self.on_order_focusin)
+        
+        instrument_frame = ttk.Frame(scrollable_frame)
+        instrument_frame.pack(pady=10, padx=20, fill="x")
+        
+        self.create_section(scrollable_frame, "INFORMAÇÕES ADICIONAIS")
+        
+        additional_frame = ttk.Frame(scrollable_frame)
+        additional_frame.pack(pady=10, padx=20, fill="x")
+        
+        ttk.Label(additional_frame, text="Informações Adicionais:").grid(row=0, column=0, sticky="w", pady=5, padx=5)
+        
+        self.text_requirements = tk.Text(additional_frame, height=4, width=72)
+        self.text_requirements.grid(row=1, column=0, columnspan=2, sticky="ew", pady=5, padx=5)
+        
+        def update_requirements(*args):
+            self.form_data['special_requirements'].set(self.text_requirements.get("1.0", "end-1c"))
+        
+        self.text_requirements.bind('<KeyRelease>', update_requirements)
+                
+                # ===== INSTRUMENTS SECTION =====
+        self.create_section(scrollable_frame, "DADOS DO MATERIAL/SERVIÇO RECEBIDO")
+
+        instruments_form_frame = ttk.Frame(scrollable_frame)
+        instruments_form_frame.pack(pady=10, padx=20, fill="x")
+
+        # Row 0: Labels
+        ttk.Label(instruments_form_frame, text="Quantidade:").grid(row=0, column=0, sticky="w", pady=(0, 2), padx=0)
+        ttk.Label(instruments_form_frame, text="Tag:").grid(row=0, column=1, sticky="w", pady=(0, 2), padx=5)
+        ttk.Label(instruments_form_frame, text="Tipo de item:").grid(row=0, column=2, sticky="w", pady=(0, 2), padx=5)
+
+        # Row 1: Entry fields
+        self.entry_quantidade = ttk.Entry(instruments_form_frame, width=10)
+        self.entry_quantidade.grid(row=1, column=0, sticky="w", pady=2, padx=5)
+
+        self.entry_tag = ttk.Entry(instruments_form_frame, width=20)
+        self.entry_tag.grid(row=1, column=1, sticky="w", pady=2, padx=5)
+        
+        self.load_instrument_types()
+
+        # Use Entry with autocomplete instead of Combobox
+        self.entry_tipo_item = ttk.Entry(instruments_form_frame, width=42)
+        self.entry_tipo_item.grid(row=1, column=2, sticky="w", pady=2, padx=5)
+
+        # Bind events for autocomplete
+        self.entry_tipo_item.bind('<KeyRelease>', lambda e: self.on_field_keyrelease(e, 'instrument_type'))
+        self.entry_tipo_item.bind('<FocusOut>', self.on_field_focusout)
+        self.entry_tipo_item.bind('<Down>', self.on_arrow_down)
+        self.entry_tipo_item.bind('<Up>', self.on_arrow_up)
+        self.entry_tipo_item.bind('<Return>', self.on_return_key)
+        self.entry_tipo_item.bind('<Escape>', self.hide_suggestions)
+
+        # Add button
+        self.btn_add_instrument = ttk.Button(instruments_form_frame, text="Adicionar", command=self.add_instrument)
+        self.btn_add_instrument.grid(row=1, column=3, sticky="w", pady=2, padx=10)
+
+        # Bind Enter key in quantidade field to add instrument
+        self.entry_quantidade.bind('<Return>', lambda e: self.add_instrument())
+        self.entry_tag.bind('<Return>', lambda e: self.add_instrument())
+        self.entry_tipo_item.bind('<Return>', self.on_instrument_return_key)
+
+        # Instruments list (Treeview)
+        instruments_list_frame = ttk.Frame(scrollable_frame)
+        instruments_list_frame.pack(pady=5, padx=20, fill="x")
+
+        # Treeview frame with scrollbar
+        tree_container = ttk.Frame(instruments_list_frame)
+        tree_container.pack(fill="x", expand=True)
+
+        instruments_scroll_y = ttk.Scrollbar(tree_container)
+        instruments_scroll_y.pack(side="right", fill="y")
+
+        self.instruments_tree = ttk.Treeview(
+            tree_container, 
+            columns=("Quantidade", "Tag", "Tipo de Item"), 
+            show="headings", 
+            yscrollcommand=instruments_scroll_y.set,
+            height=5
+        )
+        instruments_scroll_y.config(command=self.instruments_tree.yview)
+
+        # Configure columns
+        self.instruments_tree.heading("Quantidade", text="Quantidade")
+        self.instruments_tree.heading("Tag", text="Tag")
+        self.instruments_tree.heading("Tipo de Item", text="Tipo de Item")
+
+        self.instruments_tree.column("Quantidade", width=80, minwidth=60)
+        self.instruments_tree.column("Tag", width=150, minwidth=100)
+        self.instruments_tree.column("Tipo de Item", width=250, minwidth=150)
+
+        self.instruments_tree.pack(fill="x", expand=True)
+
+        # Right-click context menu
+        self.instruments_tree.bind('<Button-3>', self.show_instruments_context_menu)
+
+        # Delete key to remove
+        self.instruments_tree.bind('<Delete>', lambda e: self.remove_instrument())
+
+        # Count label
+        self.lbl_instruments_count = ttk.Label(
+            instruments_list_frame, 
+            text="Nenhum item adicionado", 
+            font=("Segoe UI", 9, "italic")
+        )
+        self.lbl_instruments_count.pack(pady=(5, 0))
+
+        request_frame = ttk.Frame(scrollable_frame)
+        request_frame.pack(pady=10, padx=20, fill="x")
+        
+        ttk.Label(request_frame, text="Data da emissão:").grid(row=0, column=0, sticky="w", pady=5, padx=5)
+        ttk.Label(request_frame, textvariable=self.form_data['request_date'], font=("Segoe UI", 10, "bold")).grid(row=0, column=1, sticky="w", pady=5, padx=5)
+        ttk.Label(request_frame, text="Usuário emissor:").grid(row=1, column=0, sticky="w", pady=5, padx=5)
+        ttk.Label(request_frame, textvariable=self.form_data['requested_by'], font=("Segoe UI", 10, "bold")).grid(row=1, column=1, sticky="w", pady=5, padx=5)
+        
+        button_frame = ttk.Frame(scrollable_frame)
+        button_frame.pack(pady=20, padx=20, fill="x")
+        
+        self.btn_generate = ttk.Button( button_frame,  text="Criar documento",  command=self.generate_pdf, style='Accent.TButton' )
+        self.btn_generate.pack(side="left", padx=5)
+        
+        self.btn_clear = ttk.Button( button_frame,  text="Limpar Formulário",  command=self.clear_form )
+        self.btn_clear.pack(side="left", padx=5)
+                
+        # NEW BUTTON - Open list in popup window
+        self.btn_open_list = ttk.Button( button_frame,  text="Abrir Lista de Recebimento",  command=self.open_protocol_list )
+        self.btn_open_list.pack(side="left", padx=5)
+
+        self.status_label = ttk.Label(scrollable_frame, text="", font=("Segoe UI", 9, "italic"))
+        self.status_label.pack(pady=10)
+    
+    def on_budget_focusin(self, event):
+        
+        self.current_suggestion_field = 'budget'
+        # If there's a customer selected but budgets haven't been loaded yet
+        if self.selected_customer_id and not self.budgets_list:
+            self.load_budgets_and_orders(self.selected_customer_id)
+
+    def open_protocol_list(self):
+        """Open the protocol list in a popup window"""
+        popup = tk.Toplevel(self.frame_form)
+        popup.title("Lista de Recebimento")
+        popup.geometry("1000x550")
+        popup.configure(bg=self.cor_fundo)
+        popup.minsize(1000, 550)
+        popup.maxsize(1000, 550)
+        
+        # Unbind mouse wheel from main window while popup is open
+        self.frame_form.unbind_all("<MouseWheel>")
+        
+        def on_popup_close():
+            """Re-bind mouse wheel to main window when popup closes"""
+            self.frame_form.bind_all("<MouseWheel>", self._mousewheel_binding)
+            popup.destroy()
+        
+        # Handle window close (X button)
+        popup.protocol("WM_DELETE_WINDOW", on_popup_close)
+        
+        # Create a ProtocolViewer instance inside the popup
+        temp_notebook = ttk.Notebook(popup)
+        temp_notebook.pack(expand=True, fill="both", padx=5, pady=5)
+        
+        # Create the ProtocolViewer in the popup
+        protocol_viewer = ProtocolViewer(temp_notebook, STR_CONN, self.cor_fundo)
+        
+        # Add a close button at the bottom
+        close_frame = ttk.Frame(popup)
+        close_frame.pack(pady=10)
+        ttk.Button(close_frame, text="Fechar", command=on_popup_close).pack()
+        
+        # Center the popup on screen
+        popup.update_idletasks()
+        #x = popup.winfo_screenwidth() // 2 - 450
+        #y = popup.winfo_screenheight() // 2 - 275
+        #popup.geometry(f"+{x}+{y}")
+
+    def on_order_focusin(self, event):
+        
+        self.current_suggestion_field = 'order'
+        # If there's a customer selected but orders haven't been loaded yet
+        if self.selected_customer_id and not self.service_orders_list:
+            self.load_budgets_and_orders(self.selected_customer_id)
+    
+    def on_field_keyrelease(self, event, field_type):
+        """Handle key release in any autocomplete field"""
+        # Ignore special keys
+        if event.keysym in ('Up', 'Down', 'Left', 'Right', 'Return', 'Escape', 'Tab', 'Shift_L', 'Shift_R', 'Control_L', 'Control_R', 'Alt_L', 'Alt_R'):
+            return
+        
+        # Set current field type
+        self.current_suggestion_field = field_type
+        
+        # Hide previous suggestions
+        self.hide_suggestions()
+        
+        if field_type == 'client_name':
+            search_text = self.form_data['client_name'].get()
+            self.filter_customers(search_text)
+            
+            if self.filtered_customers and search_text.strip():
+                self.show_suggestions(self.filtered_customers, 'client_name')
+                
+        elif field_type == 'budget':
+            search_text = self.form_data['budget_code'].get()
+            self.filtered_budgets = self.filter_items(self.budgets_list, search_text)
+            
+            if self.filtered_budgets and search_text.strip():
+                self.show_suggestions(self.filtered_budgets, 'budget')
+                
+        elif field_type == 'order':
+            search_text = self.form_data['service_order_code'].get()
+            self.filtered_service_orders = self.filter_items(self.service_orders_list, search_text)
+            
+            if self.filtered_service_orders and search_text.strip():
+                self.show_suggestions(self.filtered_service_orders, 'order')
+                
+        elif field_type == 'instrument_type':
+            search_text = self.entry_tipo_item.get()
+            self.filtered_instrument_types = self.filter_items(self.instrument_types_list, search_text)
+            
+            if self.filtered_instrument_types and search_text.strip():
+                self.show_suggestions(self.filtered_instrument_types, 'instrument_type')
+
+    def on_field_focusout(self, event):
+        """Hide suggestions when entry loses focus, with delay"""
+        self.frame_form.after(200, self.hide_suggestions)
+    
+    def on_arrow_down(self, event):
+        """Navigate down in suggestion list"""
+        if self.suggestion_listbox and self.suggestion_window:
+            try:
+                current_selection = self.suggestion_listbox.curselection()
+                if current_selection:
+                    next_index = min(current_selection[0] + 1, self.suggestion_listbox.size() - 1)
+                else:
+                    next_index = 0
+                
+                self.suggestion_listbox.selection_clear(0, tk.END)
+                self.suggestion_listbox.selection_set(next_index)
+                self.suggestion_listbox.activate(next_index)
+                self.suggestion_listbox.see(next_index)
+            except:
+                pass
+        return "break"
+    
+    def on_arrow_up(self, event):
+        """Navigate up in suggestion list"""
+        if self.suggestion_listbox and self.suggestion_window:
+            try:
+                current_selection = self.suggestion_listbox.curselection()
+                if current_selection:
+                    prev_index = max(current_selection[0] - 1, 0)
+                else:
+                    prev_index = self.suggestion_listbox.size() - 1
+                
+                self.suggestion_listbox.selection_clear(0, tk.END)
+                self.suggestion_listbox.selection_set(prev_index)
+                self.suggestion_listbox.activate(prev_index)
+                self.suggestion_listbox.see(prev_index)
+            except:
+                pass
+        return "break"
+    
+    def on_return_key(self, event):
+        """Select highlighted suggestion on Enter"""
+        if self.suggestion_listbox and self.suggestion_window:
+            try:
+                selection = self.suggestion_listbox.curselection()
+                if selection:
+                    selected_index = selection[0]
+                    self.select_suggestion(selected_index)
+                    self.hide_suggestions()
+                    return "break"
+            except:
+                pass
+        return
+    
+    def show_suggestions(self, items, field_type):
+        """Display the suggestion dropdown for any field"""
+        if not items:
+            return
+        
+        # Determine which entry widget to position under
+        if field_type == 'client_name':
+            entry_widget = self.entry_name
+        elif field_type == 'budget':
+            entry_widget = self.entry_budget
+        elif field_type == 'order':
+            entry_widget = self.entry_order
+        elif field_type == 'instrument_type':
+            entry_widget = self.entry_tipo_item
+        else:
+            return
+        
+        # Create popup window for suggestions
+        self.suggestion_window = tk.Toplevel(self.frame_form)
+        self.suggestion_window.wm_overrideredirect(True)
+        
+        # Position the window below the entry widget
+        entry_x = entry_widget.winfo_rootx()
+        entry_y = entry_widget.winfo_rooty() + entry_widget.winfo_height()
+        entry_width = entry_widget.winfo_width()
+        
+        self.suggestion_window.geometry(f"{entry_width}x200+{entry_x}+{entry_y}")
+        
+        # Create listbox with scrollbar
+        list_frame = tk.Frame(self.suggestion_window, bg='white')
+        list_frame.pack(fill='both', expand=True)
+        
+        scrollbar = tk.Scrollbar(list_frame, orient='vertical')
+        scrollbar.pack(side='right', fill='y')
+        
+        self.suggestion_listbox = tk.Listbox(
+            list_frame, 
+            yscrollcommand=scrollbar.set,
+            bg='white',
+            fg='black',
+            font=('Segoe UI', 9),
+            selectmode='single',
+            activestyle='none',
+            height=10
+        )
+        self.suggestion_listbox.pack(side='left', fill='both', expand=True)
+        scrollbar.config(command=self.suggestion_listbox.yview)
+        
+        # Populate listbox
+        if field_type == 'client_name':
+            for customer in items[:50]:
+                self.suggestion_listbox.insert(tk.END, customer['alias'])
+        else:
+            for item in items[:50]:
+                self.suggestion_listbox.insert(tk.END, str(item))
+        
+        # Bind events
+        self.suggestion_listbox.bind('<ButtonRelease-1>', lambda e: self.on_suggestion_click(e, field_type))
+        self.suggestion_listbox.bind('<Double-Button-1>', lambda e: self.on_suggestion_doubleclick(e, field_type))
+        
+        # Set focus back to entry
+        entry_widget.focus_set()
+
+    def hide_suggestions(self, event=None):
+        """Hide the suggestion dropdown"""
+        if self.suggestion_window:
+            try:
+                self.suggestion_window.destroy()
+            except:
+                pass
+            finally:
+                self.suggestion_window = None
+                self.suggestion_listbox = None
+    
+    def on_suggestion_click(self, event, field_type):
+        """Handle single click on suggestion"""
+        if self.suggestion_listbox:
+            selection = self.suggestion_listbox.curselection()
+            if selection:
+                selected_index = selection[0]
+                self.select_suggestion(selected_index)
+                self.hide_suggestions()
+    
+    def on_suggestion_doubleclick(self, event, field_type):
+        """Handle double click on suggestion"""
+        if self.suggestion_listbox:
+            selection = self.suggestion_listbox.curselection()
+            if selection:
+                selected_index = selection[0]
+                self.select_suggestion(selected_index)
+                self.hide_suggestions()
+    
+    def select_suggestion(self, index):
+        """Select a suggestion based on current field type"""
+        try:
+            if self.current_suggestion_field == 'client_name':
+                if 0 <= index < len(self.filtered_customers):
+                    customer = self.filtered_customers[index]
+                    self.form_data['client_name'].set(customer['alias'])
+                    self.selected_customer_id = customer['id']
+                    self.form_data['budget_code'].set('')
+                    self.form_data['service_order_code'].set('')
+                    self.load_budgets_and_orders(customer['id'])
+            
+            elif self.current_suggestion_field == 'budget':
+                if 0 <= index < len(self.filtered_budgets):
+                    self.form_data['budget_code'].set(str(self.filtered_budgets[index]))
+                    self.status_label.config(text=f"Orçamento selecionado: {self.filtered_budgets[index]}")
+            
+            elif self.current_suggestion_field == 'order':
+                if 0 <= index < len(self.filtered_service_orders):
+                    self.form_data['service_order_code'].set(str(self.filtered_service_orders[index]))
+                    self.status_label.config(text=f"Ordem de Serviço selecionada: {self.filtered_service_orders[index]}")
+            
+            elif self.current_suggestion_field == 'instrument_type':
+                if 0 <= index < len(self.filtered_instrument_types):
+                    self.entry_tipo_item.delete(0, 'end')
+                    self.entry_tipo_item.insert(0, str(self.filtered_instrument_types[index]))
+                    self.status_label.config(text=f"Tipo de item selecionado: {self.filtered_instrument_types[index]}")
+        
+        except Exception as e:
+            print(f"Erro ao selecionar sugestão: {str(e)}")
+
+    def create_section(self, parent, title):
+        """Create a section header"""
+        section_frame = ttk.Frame(parent)
+        section_frame.pack(pady=(5, 5), padx=20, fill="x")
+        
+        #ttk.Separator(section_frame, orient='horizontal').pack(fill="x")
+        tk.Label(
+            section_frame, 
+            text=title, 
+            font=("Segoe UI", 10, "bold"), 
+            bg=self.cor_fundo, 
+            fg="white"
+        ).pack(pady=5)
+    
+    def validate_form(self):
+        """Validate required fields"""
+        required_fields = {
+            #'client_name': 'Razão Social/Nome',
+            #'instrument_name': 'Instrumento',
+            #'instrument_serial': 'Nº Série',
+            }
+        
+        missing_fields = []
+        for field, label in required_fields.items():
+            if not self.form_data[field].get().strip():
+                missing_fields.append(label)
+        
+        if missing_fields:
+            messagebox.showerror( "Campos Obrigatórios",  f"Preencha os seguintes campos:\n\n" + "\n".join(f"• {f}" for f in missing_fields) )
+            return False
+        return True
+    
+    def generate_pdf(self):
+        """Generate PDF with form data"""
+        if not self.validate_form():
+            return
+        
+        # Ask for save location
+        filename = filedialog.asksaveasfilename( defaultextension=".pdf", filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")], initialfile=f"DR {datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf" )
+        
+        if not filename:
+            return
+        
+        try:
+            self._create_pdf(filename)
+            #self.status_label.config(text=f"PDF gerado com sucesso: {os.path.basename(filename)}")
+            messagebox.showinfo("Sucesso", f"PDF gerado com sucesso!\n\n{filename}")
+            
+            os.startfile(filename)
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao gerar PDF:\n{str(e)}")
+            self.status_label.config(text="Erro ao gerar PDF")
+    
+    def _create_pdf(self, filename):
+        
+        # ===== INSERT PROTOCOL INTO DATABASE =====
+        protocol_result = insert_protocol_and_get_id(
+            STR_CONN,
+            username,
+            self.form_data['client_name'].get(),
+            self.form_data['budget_code'].get(),
+            self.form_data['service_order_code'].get(),
+            os.path.basename(filename)
+        )
+        
+        if protocol_result:
+            protocol_code = protocol_result['protocol_code']
+            print(f"Protocolo registrado: ID {protocol_result['id']} - {protocol_code}")
+        else:
+            protocol_code = f"{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+            print("Usando protocolo fallback")
+
+        # ===== CONFIGURABLE TABLE POSITION AND SIZE =====
+        first_col_width = 55 * mm
+        second_col_width = 115 * mm
+        
+        # ===== DEFINE HEADER AND FOOTER FUNCTIONS =====
+        def add_header(canvas, doc):
+            """Add header to each page"""
+            canvas.saveState()
+            
+            # Solicitation type
+            canvas.setFont('Helvetica', 9)
+            canvas.setFillColor(HexColor("#000000"))
+            canvas.drawString(20*mm, A4[1] - 21*mm, "SERVIÇO NACIONAL DE APRENDIZAGEM INDUSTRIAL - SENAI")
+            
+            right_header = f"SENAI-UO631-PR-00004 rev. 5"
+            canvas.drawString(A4[0] - 65*mm, A4[1] - 21*mm, right_header)
+
+            # Horizontal line below header
+            canvas.setStrokeColor(HexColor("#000000"))
+            canvas.setLineWidth(1)
+            canvas.line(20*mm, A4[1] - 24*mm, A4[0] - 20*mm, A4[1] - 24*mm)
+            
+            canvas.restoreState()
+        
+        def add_footer(canvas, doc):
+            """Add footer to each page"""
+            canvas.saveState()
+            
+            # Horizontal line above footer
+            canvas.setStrokeColor(HexColor("#000000"))
+            canvas.setLineWidth(1)
+            canvas.line(20*mm, 20*mm, A4[0] - 20*mm, 20*mm)
+            
+            # Footer text
+            canvas.setFont('Helvetica', 7)
+            canvas.setFillColor(HexColor("#000000"))
+            
+            left_footer = f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            canvas.drawString(20*mm, 13*mm, left_footer)
+            
+            right_footer = f"Página {doc.page}"
+            canvas.drawRightString(A4[0] - 20*mm, 13*mm, right_footer)
+            
+            canvas.restoreState()
+        
+        # ===== CREATE DOCUMENT =====
+        doc = BaseDocTemplate(
+            filename,
+            pagesize=A4,
+            rightMargin=20*mm,
+            leftMargin=20*mm,
+            topMargin=30*mm,
+            bottomMargin=25*mm,
+            title='ANEXO I - Recebimento e Devolução de Materiais',
+            author=username
+        )
+        
+        # Create a frame that covers the full content area
+        frame = Frame(
+            doc.leftMargin,
+            doc.bottomMargin,
+            doc.width,
+            doc.height,
+            id='normal'
+        )
+        
+        template = PageTemplate(
+            id='main',
+            frames=[frame],
+            onPage=add_header,
+            onPageEnd=add_footer
+        )
+        
+        doc.addPageTemplates([template])
+        
+        # ===== STYLES =====
+        styles = getSampleStyleSheet()
+        
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=12,
+            textColor=HexColor("#000000"),
+            spaceAfter=10,
+            alignment=TA_CENTER
+        )
+        
+        label_style = ParagraphStyle(
+            'LabelStyle',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica-Bold',
+            textColor=HexColor('#333333'),
+            leading=12,
+            alignment=TA_LEFT
+        )
+
+        label_style2 = ParagraphStyle(
+            'LabelStyle',
+            parent=styles['Normal'],
+            fontSize=11,
+            fontName='Helvetica-Bold',
+            textColor=HexColor('#333333'),
+            leading=12,
+            alignment=TA_CENTER
+        )
+        
+        value_style = ParagraphStyle(
+            'ValueStyle',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica',
+            textColor=HexColor('#000000'),
+            leading=12,
+            alignment=TA_LEFT
+        )
+        
+        section_style = ParagraphStyle(
+            'SectionStyle',
+            parent=styles['Normal'],
+            fontSize=10,
+            fontName='Helvetica-Bold',
+            textColor=HexColor('#1B4B9F'),
+            leading=14,
+            alignment=TA_LEFT
+        )
+        
+        centered_style = ParagraphStyle(
+            'CenteredStyle',
+            parent=styles['Normal'],
+            fontSize=10,
+            fontName='Helvetica',
+            textColor=HexColor('#000000'),
+            leading=14,
+            alignment=TA_CENTER
+        )
+        
+        # ===== BUILD CONTENT =====
+        story = []
+        
+        # ===== ADD LOGO AS A FLOWABLE =====
+        if LOGO_BLACK_BASE64:
+            try:
+                base64_str = LOGO_BLACK_BASE64
+                
+                if "," in base64_str:
+                    base64_str = base64_str.split(",")[1]
+                    
+                image_bytes = base64.b64decode(base64_str)
+                image_buffer = io.BytesIO(image_bytes)
+                
+                h = 30
+                w = int(h * 3.74703357)
+                img_flowable = rp.Image(image_buffer, width=w, height=h)
+                # Create a single-cell table that spans the full page width and centers the image
+                logo_table = Table(
+                    [[img_flowable]], 
+                    colWidths=[doc.width]  # Full page width
+                )
+
+                logo_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center the image horizontally
+                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                    ('TOPPADDING', (0, 0), (-1, -1), 0),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ]))
+                
+                story.append(logo_table)
+                story.append(Spacer(1, 5 * mm))
+                
+            except Exception as e:
+                print(f"Erro ao adicionar logo: {str(e)}")
+        
+        # Title
+        story.append(Paragraph("ANEXO I - Recebimento e Devolução de Materiais", title_style))
+        story.append(Spacer(1, 0.5 * mm))
+        
+        # ===== CREATE TABLE DATA =====
+        table_data = []
+        
+        table_data.append([Paragraph(f"<b>N°:</b> {protocol_code}", label_style), Paragraph(f"<b>Data de chegada:</b> {datetime.now().strftime('%d/%m/%Y')}", label_style)])
+        
+        table_data.append([Paragraph(f"<b>RECEBIMENTO</b>", centered_style)])
+        
+        table_data.append([Paragraph("<b>Nome da empresa:</b>", label_style), Paragraph(self.form_data['client_name'].get(), value_style)])
+        
+        table_data.append([Paragraph("<b>Orçamento/Contrato:</b>", label_style), 
+        Paragraph(self.form_data['budget_code'].get(), value_style)])
+        
+        table_data.append([Paragraph("<b>Ordem de Serviço:</b>", label_style), Paragraph(self.form_data['service_order_code'].get(), value_style)])
+        
+                # Calculate total quantity
+        total_quantidade = sum(int(item['quantidade']) for item in self.instruments_list if item['quantidade'].isdigit())
+        quantidade_text = str(total_quantidade) if total_quantidade > 0 else ""
+
+        table_data.append([
+            Paragraph("<b>Quantidade de itens:</b>", label_style), 
+            Paragraph(quantidade_text, value_style)
+        ])
+
+        table_data.append([Paragraph("<b>Assinatura:</b>", label_style), Paragraph("", value_style)])
+        
+        # Separator row
+        table_data.append([Paragraph("<b>DEVOLUÇÃO</b>", centered_style)])
+        
+        table_data.append([Paragraph("<b>Data de devolução:</b>", label_style),Paragraph(self.form_data['instrument_name'].get(), value_style)])
+        
+        table_data.append([
+            Paragraph("<b>Entregue para:</b>", label_style),
+            Paragraph(self.form_data['instrument_serial'].get(), value_style)
+        ])
+        
+        table_data.append([
+            Paragraph("<b>Assinatura:</b>", label_style),
+            Paragraph("", value_style)
+        ])
+        
+        # Additional Information
+        if self.form_data['special_requirements'].get().strip():
+            table_data.append([Paragraph("<b>INFORMAÇÕES ADICIONAIS</b>", centered_style)])
+            additional_info = self.form_data['special_requirements'].get().replace('\n', '<br/>')
+            table_data.append([Paragraph(additional_info, value_style)])
+        
+        # ===== BUILD TABLE =====
+        formatted_rows = []
+        for row in table_data:
+            formatted_rows.append(list(row))
+        
+        table = Table(formatted_rows, colWidths=[first_col_width, second_col_width])
+        
+        # ===== APPLY TABLE STYLE =====
+        table_style = TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, HexColor("#000000")),
+            ('BOX', (0, 0), (-1, -1), 1, HexColor("#000000")),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ])
+        
+        # Apply span and background for single-column rows
+        row_index = 0
+        for row in formatted_rows:
+            if len(row) == 1:
+                table_style.add('SPAN', (0, row_index), (1, row_index))
+                table_style.add('BACKGROUND', (0, row_index), (-1, row_index), HexColor('#E8F0FE'))
+                table_style.add('TEXTCOLOR', (0, row_index), (-1, row_index), HexColor("#000000"))
+            row_index += 1
+        
+        table.setStyle(table_style)
+        story.append(table)
+                
+                # ===== INSTRUMENTS TABLE IN PDF =====
+        if self.instruments_list:
+            story.append(Spacer(1, 5 * mm))
+            story.append(Paragraph("<b>DADOS DO MATERIAL/SERVIÇO RECEBIDO</b>", label_style2))
+            story.append(Spacer(1, 2 * mm))
+            
+            # Create instruments table data
+            inst_table_data = []
+            
+            # Header row
+            inst_table_data.append([
+                Paragraph("<b>Quantidade</b>", label_style),
+                Paragraph("<b>Tag</b>", label_style),
+                Paragraph("<b>Tipo de Item</b>", label_style)
+            ])
+            
+            # Data rows
+            for item in self.instruments_list:
+                inst_table_data.append([
+                    Paragraph(item['quantidade'], value_style),
+                    Paragraph(item['tag'], value_style),
+                    Paragraph(item['tipo_item'], value_style)
+                ])
+            
+            # Create instruments table
+            inst_table = Table(inst_table_data, colWidths=[30*mm, 40*mm, 100*mm])
+            
+            inst_table_style = TableStyle([
+                ('GRID', (0, 0), (-1, -1), 0.5, HexColor("#000000")),
+                ('BOX', (0, 0), (-1, -1), 1, HexColor("#000000")),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#E8F0FE')),  # Header row
+            ])
+            
+            inst_table.setStyle(inst_table_style)
+            story.append(inst_table)
+
+        doc.build(story)
+
+    def _draw_rectangle(self, canvas, x, y, width, height, line_width, line_color, fill_color=None):
+        """Helper method to draw a rectangle on the canvas"""
+        
+        # Draw fill if specified
+        if fill_color:
+            canvas.setFillColor(fill_color)
+            canvas.rect(x, y, width, height, fill=1, stroke=0)
+        
+        # Draw border
+        canvas.setStrokeColor(line_color)
+        canvas.setLineWidth(line_width)
+        canvas.rect(x, y, width, height, fill=0, stroke=1)
+
+
+    def clear_form(self):
+        """Clear all form fields"""
+        for key in self.form_data:
+            if key in ['request_date', 'requested_by', 'priority']:
+                continue
+            self.form_data[key].set('')
+        
+        # Clear text widget
+        self.text_requirements.delete("1.0", "end")
+        
+        # Clear instruments
+        for item in self.instruments_tree.get_children():
+            self.instruments_tree.delete(item)
+        self.instruments_list = []
+        self.update_instruments_count()
+        
+        # Clear instrument input fields
+        self.entry_quantidade.delete(0, 'end')
+        self.entry_tag.delete(0, 'end')
+        self.entry_tipo_item.delete(0, 'end')
+        
+        self.selected_customer_id = None
+        self.budgets_list = []
+        self.service_orders_list = []
+        self.filtered_budgets = []
+        self.filtered_service_orders = []
+        self.hide_suggestions()
+
+    def on_instrument_return_key(self, event):
+        """Handle Return key in instrument type field"""
+        # If suggestions are visible, select the highlighted one
+        if self.suggestion_listbox and self.suggestion_window and self.current_suggestion_field == 'instrument_type':
+            try:
+                selection = self.suggestion_listbox.curselection()
+                if selection:
+                    selected_index = selection[0]
+                    self.select_suggestion(selected_index)
+                    self.hide_suggestions()
+                    return "break"
+            except:
+                pass
+        
+        # If no suggestion selected, add the instrument
+        self.add_instrument()
+        return "break"
 # ==================== MAIN ====================
 
 version_check = check_app_version(STR_CONN, APP_NAME, APP_VERSION)
@@ -4745,7 +2384,6 @@ if version_check['update_required']:
     sys.exit()
 else:
     print(version_check['message'])
-
 
 status_servidor, cor_status = verificar_disponibilidade3()
 status_servidor3, cor_status3 = status_servidor, cor_status
@@ -4759,6 +2397,8 @@ elif bool_agenda == 0:
     
 root.geometry("550x675")
 root.minsize(650, 675)
+show_loading_screen(root,f"O {APP_NAME} está inicializando...")
+
 cor_fundo = _from_rgb((27, 75, 159))
 root.configure(bg=cor_fundo)
 
@@ -4772,10 +2412,14 @@ style.configure("TLabel", background=cor_fundo, foreground="white", font=("Segoe
 
 notebook = ttk.Notebook(root)
 notebook.pack(expand=True, fill="both")
-LabSelector(notebook, cor_fundo)
-# Check version
 
-db_viewer6 = DatabaseViewer6(notebook, STR_CONN_LINKED, cor_fundo)         ### VISTA GERAL DE ORDENS DE SERVIÇO
+if bool_agenda == 1:
+    db_viewer2 = DatabaseViewer2(notebook, STR_CONN_LINKED, cor_fundo)         ### PADRÕES
+    cert_form = CertificateRequestForm(notebook, STR_CONN_LINKED, cor_fundo)   ### SOLICITAÇÃO DE CERTIFICADO
+    #protocol_viewer = ProtocolViewer(notebook, STR_CONN, cor_fundo)            ### PROTOCOLOS
+
+hide_loading_screen()
+root.tkraise()
 #db_viewer_orcamentos = DatabaseViewerOrcamentos(notebook, STR_CONN_LINKED, cor_fundo)
 
 #for lab_code, lab_config in LABS.items():
@@ -4824,6 +2468,10 @@ def open_link(event):
     webbrowser.open("https://teams.microsoft.com/l/chat/0/0?users=guilherme.castro@senairs.org.br&message=E%20aí%20meu%20chapa")
 credits.bind("<Button-1>", open_link)
 
+
 root.mainloop()
 
 #PIL PIL._imagingtk PIL._tkinter_finder
+
+# 5e6ee1b4689b5261d9f9fafe2f83aad4082df04a10ab6d2846094b97ad33a2e7 1701198326
+# cd2303597b614f903daa0dcf2be479b6a53cb045c1c4acd9071ea9ab95fb706b 198326
