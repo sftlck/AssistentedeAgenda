@@ -613,7 +613,7 @@ class LabSelector:
                     elements.append(kpi_row)
                     elements.append(Spacer(1, 3*mm))
                     
-                    headers = ["Entrega", "Recebimento", "OS", "Item", "Tipo", "Especificação", "Código", "Duração"]
+                    headers = ["Entrega", "Recebimento", "OS", "Item", "Tipo", "Especificação", "Código", "Nominal"]
                     table_data = [headers] + lab_data
                     
                     col_widths = [20*mm, 20*mm, 20*mm, 25*mm, 35*mm, 110*mm, 25*mm, 18*mm]
@@ -747,7 +747,7 @@ class LabSelector:
                             ss.notes,
                             s.code AS 'Código',
                             s.specification AS 'Serviço',
-                            s.execution_time_minutes AS 'Duração'
+                            s.execution_time_minutes AS 'Nominal'
                         FROM [IST-PGE].dbo.Service_Schedule ss
                         JOIN [IST-PGE].dbo.Service_Modes_Local s ON ss.service_id = s.id
                         WHERE ss.id_sector = {lab_config['sector_id']}
@@ -774,7 +774,7 @@ class LabSelector:
                                 Paragraph(item_display, styles['Normal']),
                                 Paragraph(str(rs.Fields('Código').Value or ""), styles['Normal']),
                                 Paragraph(str(rs.Fields('Serviço').Value or "")[:60], styles['Normal']),
-                                Paragraph(f"{rs.Fields('Duração').Value or 0} min", styles['Normal']),
+                                Paragraph(f"{rs.Fields('Nominal').Value or 0} min", styles['Normal']),
                             ])
                             
                             schedule_ids.append(rs.Fields('schedule_id').Value)
@@ -821,7 +821,7 @@ class LabSelector:
                     elements.append(Spacer(1, 3*mm))
                     
                     # Table
-                    headers = ["Data", "Horário", "OS", "Item", "Código", "Serviço", "Duração"]
+                    headers = ["Data", "Horário", "OS", "Item", "Código", "Serviço", "Nominal"]
                     table_data = [headers] + lab_data
                     
                     col_widths = [25*mm, 35*mm, 25*mm, 25*mm, 25*mm, 65*mm, 20*mm]
@@ -941,7 +941,7 @@ class LabSelector:
         ServiceSchedulerLinkedDirect(lab_notebook, STR_CONN_LINKED, STR_CONN, self.cor_fundo, lab_code=lab_code, lab_config=lab_config)
 
 class ProcedureManager:
-    """Gerenciador de Procedimentos - Update procedure_name and procedure_url"""
+    """Gerenciador de Procedimentos - Update procedure_name, procedure_url e tempos"""
     
     def __init__(self, parent, str_conn, str_conn_primary, cor_fundo, lab_code="", lab_config=None):
         self.str_conn = str_conn
@@ -950,15 +950,13 @@ class ProcedureManager:
         self.lab_code = lab_code
         self.lab_config = lab_config or {}
         self.all_rows = []
-        self.filtered_rows = []  # ADD THIS
+        self.filtered_rows = []
         
         self._open_window(parent)
     
     def _sanitize_input(self, text):
-        """Remove dangerous characters to prevent SQL injection"""
         if not text:
             return ""
-        # Remove single quotes, semicolons, double dashes
         dangerous = ["'", ";", "--", "/*", "*/", "xp_", "sp_", "exec", "drop", "delete", "truncate"]
         sanitized = text
         for d in dangerous:
@@ -969,7 +967,7 @@ class ProcedureManager:
         lab_name = self.lab_config.get('name', self.lab_code)
         
         self.window = tk.Toplevel(parent)
-        self.window.geometry("900x550")
+        self.window.geometry("950x600")
         self.window.minsize(900, 550)
         self.window.configure(bg=self.cor_fundo)
         self.window.title(f"Lista de Tempos, Serviços e ITs - Laboratório de {lab_name}")
@@ -979,13 +977,15 @@ class ProcedureManager:
         top_frame = tk.Frame(self.window, bg=self.cor_fundo)
         top_frame.pack(fill='x', padx=15, pady=(15, 5))
         
-        tk.Label(top_frame, text=f"Lista de Tempos, Serviços e ITs",font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg='white').pack(anchor='w')
+        tk.Label(top_frame, text=f"Lista de Tempos, Serviços e ITs",
+                font=('Segoe UI', 13, 'bold'), bg=self.cor_fundo, fg='white').pack(anchor='w')
         
         # ===== SEARCH =====
         search_frame = tk.Frame(self.window, bg=self.cor_fundo)
         search_frame.pack(fill='x', padx=15, pady=(10, 5))
         
-        tk.Label(search_frame, text="Buscar:", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white').pack(side='left', padx=(0, 5))
+        tk.Label(search_frame, text="Buscar:", font=('Segoe UI', 9),
+                bg=self.cor_fundo, fg='white').pack(side='left', padx=(0, 5))
         
         self.search_var = tk.StringVar()
         self.search_var.trace('w', lambda *args: self._filter_treeview())
@@ -1001,60 +1001,87 @@ class ProcedureManager:
         tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
         tree_scroll_x.pack(side='bottom', fill='x')
         
-        columns = ("Código", "Duração", "Serviço", "Descrição","Instrução de Trabalho", "Link")
+        columns = ("Código", "Nominal", "Adicional", "Serviço", "Descrição", "IT", "Link")
         
-        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",yscrollcommand=tree_scroll_y.set,xscrollcommand=tree_scroll_x.set,selectmode="browse")
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",
+                                  yscrollcommand=tree_scroll_y.set,
+                                  xscrollcommand=tree_scroll_x.set,
+                                  selectmode="browse")
         
         tree_scroll_y.config(command=self.tree.yview)
         tree_scroll_x.config(command=self.tree.xview)
         
-        self.tree.heading("Código",                 text="Código")
-        self.tree.heading("Duração",                text="Duração")
-        self.tree.heading("Serviço",                text="Serviço")
-        self.tree.heading("Descrição",              text="Descrição")
-        self.tree.heading("Instrução de Trabalho",  text="Instrução de Trabalho")
-        self.tree.heading("Link",                   text="Link")
+        self.tree.heading("Código", text="Código")
+        self.tree.heading("Nominal", text="Nominal")
+        self.tree.heading("Adicional", text="Adicional")
+        self.tree.heading("Serviço", text="Serviço")
+        self.tree.heading("Descrição", text="Descrição")
+        self.tree.heading("IT", text="Instrução de Trabalho")
+        self.tree.heading("Link", text="Link")
         
-        self.tree.column("Código",                  width=70,minwidth=65)
-        self.tree.column("Duração",                 width=50,minwidth=50)
-        self.tree.column("Serviço",                 width=200)
-        self.tree.column("Descrição",               width=100)
-        self.tree.column("Instrução de Trabalho",   width=120,minwidth=120)
-        self.tree.column("Link",                    width=250)
+        self.tree.column("Código", width=70, minwidth=65)
+        self.tree.column("Nominal", width=50, minwidth=50)
+        self.tree.column("Adicional", width=50, minwidth=50)
+        self.tree.column("Serviço", width=180)
+        self.tree.column("Descrição", width=100)
+        self.tree.column("IT", width=120, minwidth=120)
+        self.tree.column("Link", width=200)
         
         self.tree.pack(expand=True, fill='both')
         self.tree.bind('<<TreeviewSelect>>', self._on_select)
         self.tree.bind('<Double-1>', lambda e: self._edit_selected())
         
         # ===== EDIT FRAME =====
-        edit_frame = tk.LabelFrame(self.window, text=" Editar Dados [Em desenvolvimento] ", font=('Segoe UI', 10, 'bold'),bg=self.cor_fundo, fg="#FFFFFF",padx=10, pady=10)
+        edit_frame = tk.LabelFrame(self.window, text=" Editar Dados ",font=('Segoe UI', 10, 'bold'),bg=self.cor_fundo, fg="#FFFFFF",padx=10, pady=10)
         edit_frame.pack(fill='x', padx=15, pady=(5, 10))
         
         # Current info
-        self.lbl_current = tk.Label(edit_frame, text="Selecione um serviço na lista acima para editar.",font=('Segoe UI', 9), bg=self.cor_fundo, fg='#B7D5F5', anchor='w', justify='left')
+        self.lbl_current = tk.Label(edit_frame, text="Selecione um serviço na lista acima para editar.",font=('Segoe UI', 9), bg=self.cor_fundo, fg='#B7D5F5',anchor='w', justify='left')
         self.lbl_current.pack(anchor='w', pady=(0, 5))
         
-        # Procedure Name
+        # ===== TEMPO NOMINAL =====
+        time_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
+        time_frame.pack(fill='x', pady=3)
+        
+        tk.Label(time_frame, text="Tempo Nominal (min):", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
+        
+        self.exec_time_var = tk.StringVar()
+        self.entry_exec_time = ttk.Entry(time_frame, textvariable=self.exec_time_var, width=10)
+        self.entry_exec_time.pack(side='left', padx=5)
+        
+        # ===== TEMPO ADICIONAL =====
+        add_time_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
+        add_time_frame.pack(fill='x', pady=3)
+        
+        tk.Label(add_time_frame, text="Tempo Adicional (min):", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
+        
+        self.add_time_var = tk.StringVar()
+        self.entry_add_time = ttk.Entry(add_time_frame, textvariable=self.add_time_var, width=10)
+        self.entry_add_time.pack(side='left', padx=5)
+        
+        # ===== PROCEDURE NAME =====
         name_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
         name_frame.pack(fill='x', pady=3)
         
-        tk.Label(name_frame, text="Nome da Instrução de Trabalho:", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
+        tk.Label(name_frame, text="Nome da Instrução de Trabalho:", font=('Segoe UI', 9),
+                bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
         
         self.proc_name_var = tk.StringVar()
         self.entry_name = ttk.Entry(name_frame, textvariable=self.proc_name_var, width=60)
         self.entry_name.pack(side='left', padx=5, fill='x', expand=True)
         
-        # Procedure URL
+        # ===== PROCEDURE URL =====
         url_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
         url_frame.pack(fill='x', pady=3)
         
-        tk.Label(url_frame, text="Link N° EmDoc:", font=('Segoe UI', 9),bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
+        tk.Label(url_frame, text="Link N° EmDoc:", font=('Segoe UI', 9),
+                bg=self.cor_fundo, fg='white', width=25, anchor='w').pack(side='left')
         
         self.proc_url_var = tk.StringVar()
         self.entry_url = ttk.Entry(url_frame, textvariable=self.proc_url_var, width=55)
         self.entry_url.pack(side='left', padx=5, fill='x', expand=True)
         
-        # Buttons
+        # ===== BUTTONS =====
         btn_frame = tk.Frame(edit_frame, bg=self.cor_fundo)
         btn_frame.pack(fill='x', pady=(10, 0))
         
@@ -1063,16 +1090,11 @@ class ProcedureManager:
         self.btn_save.config(state='disabled')
         
         ttk.Button(btn_frame, text="Atualizar Lista", command=self._load_data).pack(side='left', padx=5)
-        
         ttk.Button(btn_frame, text="Exportar CSV", command=self._export_to_csv, cursor='hand2').pack(side='left', padx=5)
-
-        #self.btn_clear = ttk.Button(btn_frame, text="Limpar", command=self._clear_fields, cursor='hand2')
-        #self.btn_clear.pack(side='left', padx=5)
-        
-        #ttk.Button(btn_frame, text="Fechar", command=self.window.destroy).pack(side='right', padx=5)
         
         # Status
-        self.status_label = tk.Label(edit_frame, text="", font=('Segoe UI', 9),bg='white', fg="#000000")
+        self.status_label = tk.Label(edit_frame, text="", font=('Segoe UI', 9),
+                                      bg='white', fg="#000000")
         self.status_label.pack(anchor='w', pady=(5, 0))
         
         # Load data
@@ -1085,41 +1107,42 @@ class ProcedureManager:
             self.tree.delete(item)
         
         self.all_rows.clear()
-        self.filtered_rows.clear()  # ADD
-        sector_id = self.lab_config.get('sector_id', 0)
+        self.filtered_rows.clear()
         
         try:
             conn = win32com.client.Dispatch("ADODB.Connection")
             rs = win32com.client.Dispatch("ADODB.Recordset")
             conn.Open(self.str_conn_primary)
             
-            # Get services that exist in Service_Modes_Local
             sql = f"""
 
                 SELECT 
-                sml.id, 
-                sml.code, 
-                sml.execution_time_minutes, 
-                sml.specification,
-                sml.description, 
-                sml.procedure_name, 
-                sml.procedure_url      
-
+                    sml.id, 
+                    sml.code, 
+                    sml.execution_time_minutes,
+                    sml.additional_execution_time_minutes,
+                    sml.specification,
+                    sml.description, 
+                    sml.procedure_name, 
+                    sml.procedure_url      
                 FROM [IST-PGE].dbo.Service_Modes_Local sml
-
                 WHERE sml.code LIKE '%631{self.lab_code.lower()}%'
-
                 ORDER BY sml.code ASC
+                
             """
             rs.Open(sql, conn)
             
             if not rs.EOF:
                 rs.MoveFirst()
                 while not rs.EOF:
+                    exec_time = rs.Fields('execution_time_minutes').Value
+                    add_time = rs.Fields('additional_execution_time_minutes').Value or 0
+                    
                     row_data = {
                         'id': rs.Fields('id').Value,
                         'code': rs.Fields('code').Value if rs.Fields('code').Value else "",
-                        'execution_time_minutes': f"{rs.Fields('execution_time_minutes').Value} min"  if rs.Fields('execution_time_minutes').Value else "",
+                        'execution_time_minutes': exec_time if exec_time else 0,
+                        'additional_execution_time_minutes': add_time,
                         'specification': rs.Fields('specification').Value if rs.Fields('specification').Value else "",
                         'description': rs.Fields('description').Value if rs.Fields('description').Value else "",
                         'procedure_name': rs.Fields('procedure_name').Value if rs.Fields('procedure_name').Value else "",
@@ -1132,7 +1155,8 @@ class ProcedureManager:
                     
                     self.tree.insert("", "end", values=(
                         row_data['code'],
-                        row_data['execution_time_minutes'],
+                        f"{row_data['execution_time_minutes']} min",
+                        f"{row_data['additional_execution_time_minutes']} min",
                         row_data['specification'],
                         row_data['description'],
                         proc_name,
@@ -1145,7 +1169,7 @@ class ProcedureManager:
             
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao carregar dados:\n{str(e)}")
-
+    
     def _filter_treeview(self):
         """Filter treeview by search"""
         search_term = self.search_var.get().lower()
@@ -1153,26 +1177,32 @@ class ProcedureManager:
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        self.filtered_rows.clear()  # Reset filtered list
+        self.filtered_rows.clear()
         
         for row in self.all_rows:
             if not search_term or \
-            search_term in str(row['code']).lower() or \
-            search_term in str(row['execution_time_minutes']).lower() or \
-            search_term in str(row['specification']).lower() or \
-            search_term in str(row['description']).lower() or \
-            search_term in str(row['procedure_name']).lower():
+               search_term in str(row['code']).lower() or \
+               search_term in str(row['execution_time_minutes']).lower() or \
+               search_term in str(row['additional_execution_time_minutes']).lower() or \
+               search_term in str(row['specification']).lower() or \
+               search_term in str(row['description']).lower() or \
+               search_term in str(row['procedure_name']).lower():
                 
-                self.filtered_rows.append(row)  # Track which rows are visible
+                self.filtered_rows.append(row)
                 
                 proc_name = row['procedure_name'] if row['procedure_name'] else "(vazio)"
                 proc_url = row['procedure_url'] if row['procedure_url'] else "(vazio)"
                 
                 self.tree.insert("", "end", values=(
-                    row['code'], row['execution_time_minutes'],
-                    row['specification'], row['description'], proc_name, proc_url
+                    row['code'],
+                    f"{row['execution_time_minutes']} min",
+                    f"{row['additional_execution_time_minutes']} min",
+                    row['specification'],
+                    row['description'],
+                    proc_name,
+                    proc_url
                 ))
-
+    
     def _on_select(self, event):
         """Populate fields when a row is selected"""
         selected = self.tree.selection()
@@ -1183,7 +1213,6 @@ class ProcedureManager:
         all_items = self.tree.get_children()
         idx = all_items.index(selected[0])
         
-        # Use filtered_rows if filtering is active, otherwise all_rows
         source = self.filtered_rows if self.filtered_rows else self.all_rows
         
         if idx < len(source):
@@ -1192,51 +1221,68 @@ class ProcedureManager:
             display_spec = spec if len(spec) < 70 else spec[:70] + '...'
             self.lbl_current.config(text=f"Editando: {row['code']} - {display_spec}")
             
+            self.exec_time_var.set(str(row['execution_time_minutes']))
+            self.add_time_var.set(str(row['additional_execution_time_minutes']))
             self.proc_name_var.set(row['procedure_name'])
             self.proc_url_var.set(row['procedure_url'])
             self.btn_save.config(state='normal')
             self._selected_idx = idx
-            self._selected_from_filtered = bool(self.filtered_rows)  # Track source
-
+            self._selected_from_filtered = bool(self.filtered_rows)
+    
     def _clear_fields(self):
         """Clear edit fields"""
-        #self.lbl_current.config(text="Selecione um serviço na lista acima para editar.")
+        self.lbl_current.config(text="Selecione um serviço na lista acima para editar.")
+        self.exec_time_var.set("")
+        self.add_time_var.set("")
         self.proc_name_var.set("")
         self.proc_url_var.set("")
         self.btn_save.config(state='disabled')
         self._selected_idx = None
+        self._selected_from_filtered = False
         self.status_label.config(text="")
     
     def _edit_selected(self):
-        """Focus on name field when double-clicking"""
+        """Focus on first field when double-clicking"""
         if self.btn_save.cget('state') == 'normal':
-            self.entry_name.focus_set()
+            self.entry_exec_time.focus_set()
     
     def _save_procedure(self):
         """Save procedure info to database"""
         if self._selected_idx is None:
             return
+        
         source = self.filtered_rows if getattr(self, '_selected_from_filtered', False) else self.all_rows
         row = source[self._selected_idx]
-        
-        #row = self.all_rows[self._selected_idx]
         service_id = row['id']
         service_code = row['code']
         
         # Sanitize inputs
+        exec_time = self._sanitize_input(self.exec_time_var.get().strip())
+        add_time = self._sanitize_input(self.add_time_var.get().strip())
         proc_name = self._sanitize_input(self.proc_name_var.get().strip())
         proc_url = self._sanitize_input(self.proc_url_var.get().strip())
         
-        # Validate URL format (basic check)
+        # Validate numbers
+        try:
+            exec_time_val = int(exec_time) if exec_time else 0
+            add_time_val = int(add_time) if add_time else 0
+        except ValueError:
+            messagebox.showerror("Erro", "Tempo deve ser um número inteiro (minutos).")
+            return
+        
+        # Validate URL
         if proc_url and not (proc_url.startswith('http://') or proc_url.startswith('https://')):
-            if not messagebox.askyesno("Aviso", "A URL não começa com http:// ou https://. Deseja salvar mesmo assim?"):
+            if not messagebox.askyesno("Aviso", 
+                "A URL não começa com http:// ou https://. Deseja salvar mesmo assim?"):
                 return
         
         # Confirm
         confirm = messagebox.askyesno("Confirmar",
-            f"Atualizar procedimento para:\n\n"
+            f"Atualizar dados para:\n\n"
             f"Código: {service_code}\n"
-            f"Nome: {proc_name if proc_name else '(vazio)'}\n"
+            f"Tempo Nominal: {exec_time_val} min\n"
+            f"Tempo Adicional: {add_time_val} min\n"
+            f"Nome IT: {proc_name if proc_name else '(vazio)'}\n"
             f"URL: {proc_url if proc_url else '(vazio)'}\n\n"
             f"Continuar?")
         
@@ -1249,26 +1295,32 @@ class ProcedureManager:
             
             sql = f"""
                 UPDATE [IST-PGE].dbo.Service_Modes_Local
-                SET procedure_name = {'NULL' if not proc_name else f"'{proc_name.replace(chr(39), chr(39)+chr(39))}'"},
+                SET execution_time_minutes = {exec_time_val},
+                    additional_execution_time_minutes = {add_time_val},
+                    procedure_name = {'NULL' if not proc_name else f"'{proc_name.replace(chr(39), chr(39)+chr(39))}'"},
                     procedure_url = {'NULL' if not proc_url else f"'{proc_url.replace(chr(39), chr(39)+chr(39))}'"}
                 WHERE id = {service_id}
             """
             conn.Execute(sql)
             conn.Close()
             
-            self.status_label.config(text=f"Instrução de trabalho de {service_code} atualizado com sucesso!")
+            self.status_label.config(text=f"Dados de {service_code} atualizados com sucesso!")
             
-            # Refresh data
             self._load_data()
             self._clear_fields()
             
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao salvar:\n{str(e)}")
             self.status_label.config(text="Erro ao salvar!")
-
+    
     def _export_to_csv(self):
         """Export treeview data to CSV"""
-        filename = filedialog.asksaveasfilename(defaultextension=".csv",filetypes=[("CSV files", "*.csv")],initialfile=f"Servicos_IT_{self.lab_code}.csv",title="Exportar para CSV")
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv")],
+            initialfile=f"Servicos_IT_{self.lab_code}.csv",
+            title="Exportar para CSV"
+        )
         
         if not filename:
             return
@@ -1279,14 +1331,13 @@ class ProcedureManager:
             with open(filename, 'w', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f, delimiter=';')
                 
-                # Header
-                writer.writerow(["Código", "Duração", "Serviço", "Descrição", "Instrução de Trabalho", "Link"])
+                writer.writerow(["Código", "Nominal (min)", "Adicional (min)", "Serviço", "Descrição", "IT", "Link"])
                 
-                # Data from all_rows (full data, not filtered)
                 for row in self.all_rows:
                     writer.writerow([
                         row['code'],
                         row['execution_time_minutes'],
+                        row['additional_execution_time_minutes'],
                         row['specification'],
                         row['description'],
                         row['procedure_name'] if row['procedure_name'] else "(vazio)",
@@ -2647,11 +2698,11 @@ class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
             tree_scroll = ttk.Scrollbar(tree_frame)
             tree_scroll.pack(side='right', fill='y')
             
-            columns = ("Horário", "OS", "Item", "Serviço", "Descrição", "Duração", "Código")
+            columns = ("Horário", "OS", "Item", "Serviço", "Descrição", "Nominal", "Código")
             tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, selectmode="extended")
             tree_scroll.config(command=tree.yview)
             
-            for col, width in [("Horário", 100), ("OS", 80), ("Item", 70), ("Serviço", 150), ("Descrição", 150), ("Duração", 55), ("Código", 70)]:
+            for col, width in [("Horário", 100), ("OS", 80), ("Item", 70), ("Serviço", 150), ("Descrição", 150), ("Nominal", 55), ("Código", 70)]:
                 tree.heading(col, text=col)
                 tree.column(col, width=width)
             
@@ -2760,11 +2811,11 @@ class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
             tree_scroll = ttk.Scrollbar(tree_frame)
             tree_scroll.pack(side='right', fill='y')
             
-            columns = ("Horário", "OS", "Item", "Serviço", "Descrição", "Duração", "Código")
+            columns = ("Horário", "OS", "Item", "Serviço", "Descrição", "Nominal", "Código")
             tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, selectmode="extended")
             tree_scroll.config(command=tree.yview)
             
-            for col, width in [("Horário", 100), ("OS", 80), ("Item", 70), ("Serviço", 150), ("Descrição", 150), ("Duração", 55), ("Código", 70)]:
+            for col, width in [("Horário", 100), ("OS", 80), ("Item", 70), ("Serviço", 150), ("Descrição", 150), ("Nominal", 55), ("Código", 70)]:
                 tree.heading(col, text=col)
                 tree.column(col, width=width)
             tree.pack(expand=True, fill='both')
@@ -3189,8 +3240,8 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         tree_scroll_x.pack(side='bottom', fill='x')
         # Color tags for status
 
-        #columns = ("OS", "Item", "Especificação", "Descrição", "Código", "Duração")
-        columns = ("Entrega","OS", "Item", "Tipo","Especificação", "Código", "Duração","Instrução de Trabalho")
+        #columns = ("OS", "Item", "Especificação", "Descrição", "Código", "Nominal")
+        columns = ("Entrega","OS", "Item", "Tipo","Especificação", "Código", "Nominal","Instrução de Trabalho")
         
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",yscrollcommand=tree_scroll_y.set,xscrollcommand=tree_scroll_x.set,selectmode="extended")
         
@@ -3210,7 +3261,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                         "Especificação":            200, 
                         "Descrição":                250, 
                         "Código":                   50, 
-                        "Duração":                  70, 
+                        "Nominal":                  70, 
                         "Status de Agendamento":    110,
                         "Instrução de Trabalho":    70
                         }
@@ -3629,8 +3680,8 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
     def _update_treeview_columns(self):
         """Update treeview to include Status column"""
         # Reconfigure columns
-        #self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Descrição", "Código", "Duração", "Status de Agendamento")
-        self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Código", "Duração", "Status de Agendamento", "Instrução de Trabalho")
+        #self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Descrição", "Código", "Nominal", "Status de Agendamento")
+        self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Código", "Nominal", "Status de Agendamento", "Instrução de Trabalho")
         
         self.tree.heading("Entrega", text="Entrega")
         self.tree.heading("OS", text="OS")
@@ -3639,7 +3690,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         self.tree.heading("Especificação", text="Especificação")
         #self.tree.heading("Descrição", text="Descrição")
         self.tree.heading("Código", text="Código")
-        self.tree.heading("Duração", text="Duração")
+        self.tree.heading("Nominal", text="Nominal")
         self.tree.heading("Status de Agendamento", text="Status de Agendamento")
         self.tree.heading("Instrução de Trabalho", text="Instrução de Trabalho")
         
@@ -3650,7 +3701,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         self.tree.column("Especificação", width=160)
         #self.tree.column("Descrição", width=200)
         self.tree.column("Código", width=30)
-        self.tree.column("Duração", width=20)
+        self.tree.column("Nominal", width=20)
         self.tree.column("Status de Agendamento", width=110)
         self.tree.column("Instrução de Trabalho", width=70)
         
