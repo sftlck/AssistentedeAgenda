@@ -30,7 +30,7 @@ from io import BytesIO
 from PIL import Image, ImageTk
 
 LOGO_BASE64 = """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"""
-bool_agenda = 0
+bool_agenda = 1
 
 def get_server_ip(hostname='UO061M4078592'):
     try:
@@ -1003,29 +1003,26 @@ class ProcedureManager:
         
         columns = ("Código", "Nominal", "Adicional", "Serviço", "Descrição", "IT", "Link")
         
-        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",
-                                  yscrollcommand=tree_scroll_y.set,
-                                  xscrollcommand=tree_scroll_x.set,
-                                  selectmode="browse")
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings",yscrollcommand=tree_scroll_y.set,xscrollcommand=tree_scroll_x.set,selectmode="browse")
         
         tree_scroll_y.config(command=self.tree.yview)
         tree_scroll_x.config(command=self.tree.xview)
         
-        self.tree.heading("Código", text="Código")
-        self.tree.heading("Nominal", text="Nominal")
-        self.tree.heading("Adicional", text="Adicional")
-        self.tree.heading("Serviço", text="Serviço")
-        self.tree.heading("Descrição", text="Descrição")
-        self.tree.heading("IT", text="Instrução de Trabalho")
-        self.tree.heading("Link", text="Link")
+        self.tree.heading("Código",     text="Código")
+        self.tree.heading("Nominal",    text="Nominal")
+        self.tree.heading("Adicional",  text="Adicional")
+        self.tree.heading("Serviço",    text="Serviço")
+        self.tree.heading("Descrição",  text="Descrição")
+        self.tree.heading("IT",         text="Instrução de Trabalho")
+        self.tree.heading("Link",       text="Link")
         
-        self.tree.column("Código", width=70, minwidth=65)
-        self.tree.column("Nominal", width=50, minwidth=50)
-        self.tree.column("Adicional", width=50, minwidth=50)
-        self.tree.column("Serviço", width=180)
-        self.tree.column("Descrição", width=100)
-        self.tree.column("IT", width=120, minwidth=120)
-        self.tree.column("Link", width=200)
+        self.tree.column("Código",      width=70, minwidth=65)
+        self.tree.column("Nominal",     width=50, minwidth=50)
+        self.tree.column("Adicional",   width=50, minwidth=50)
+        self.tree.column("Serviço",     width=180)
+        self.tree.column("Descrição",   width=100)
+        self.tree.column("IT",          width=120, minwidth=120)
+        self.tree.column("Link",        width=200)
         
         self.tree.pack(expand=True, fill='both')
         self.tree.bind('<<TreeviewSelect>>', self._on_select)
@@ -1093,8 +1090,7 @@ class ProcedureManager:
         ttk.Button(btn_frame, text="Exportar CSV", command=self._export_to_csv, cursor='hand2').pack(side='left', padx=5)
         
         # Status
-        self.status_label = tk.Label(edit_frame, text="", font=('Segoe UI', 9),
-                                      bg='white', fg="#000000")
+        self.status_label = tk.Label(edit_frame, text="", font=('Segoe UI', 9),bg='white', fg="#000000")
         self.status_label.pack(anchor='w', pady=(5, 0))
         
         # Load data
@@ -2414,7 +2410,7 @@ class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
         if isinstance(value, datetime):
             return time(value.hour, value.minute, 0)
         return None
-
+    
     def schedule_all_pending(self, from_date=None):
         
         try:
@@ -2424,7 +2420,10 @@ class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
             rs = win32com.client.Dispatch("ADODB.Recordset")
             sql = f"""
                 SELECT ss.id as schedule_id, ss.service_id,
-                       s.execution_time_minutes, ss.priority
+                    s.execution_time_minutes,
+                    ISNULL(s.additional_execution_time_minutes, 0) as additional_execution_time_minutes,
+                    ISNULL(ss.custom_execution_time, 0) as custom_execution_time,
+                    ss.priority
                 FROM [IST-PGE].dbo.Service_Schedule ss
                 JOIN [IST-PGE].dbo.Service_Modes_Local s ON ss.service_id = s.id
                 WHERE ss.status = 'PENDING' AND ss.id_sector = {self.id_sector}
@@ -2440,6 +2439,8 @@ class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
                         'schedule_id': rs.Fields('schedule_id').Value,
                         'service_id': rs.Fields('service_id').Value,
                         'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
+                        'additional_execution_time_minutes': rs.Fields('additional_execution_time_minutes').Value or 0,
+                        'custom_execution_time': rs.Fields('custom_execution_time').Value or 0,
                         'priority': rs.Fields('priority').Value
                     })
                     rs.MoveNext()
@@ -2456,9 +2457,23 @@ class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
             
             first_start = None
             last_end = None
+            last_service_id = None  # ← Para lógica de adicional
             
             for service in pending_services:
-                next_start, next_end = self.find_next_available_slot(current_time, service['execution_time_minutes'])
+                service_id = service['service_id']
+                
+                # Se custom_execution_time foi preenchido, usa ele. Senão:
+                if service['custom_execution_time'] > 0:
+                    duration = service['custom_execution_time']
+                else:
+                    # Primeiro do tipo: nominal + adicional
+                    # Mesmo tipo em sequência: só nominal
+                    if service_id != last_service_id:
+                        duration = service['execution_time_minutes']# + service['additional_execution_time_minutes']
+                    else:
+                        duration = service['execution_time_minutes']
+                
+                next_start, next_end = self.find_next_available_slot(current_time, duration)
                 
                 if next_start is None:
                     continue
@@ -2483,6 +2498,7 @@ class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
                 """)
                 
                 current_time = next_end
+                last_service_id = service_id  # ← Atualiza para o próximo
             
             conn.Close()
             
@@ -2490,8 +2506,8 @@ class ServiceScheduler: #CALENDÁRIO DE SERVIÇOS DO SETOR
         except Exception as e:
             print(f"Error in schedule_all_pending: {e}")
             return None, None
-
     # ===== RESCHEDULE METHODS =====
+
     def reschedule_day_services(self, calendar_key):
         if calendar_key not in self.calendar_data:
             messagebox.showinfo("Aviso", "Nenhum serviço neste dia!")
@@ -3418,13 +3434,12 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         sector_id = self.lab_config.get('sector_id', 0)
 
         try:
-            # 1. Query linked server
+            # 1. Query linked server (SEM execution_time)
             conn = win32com.client.Dispatch("ADODB.Connection")
             rs = win32com.client.Dispatch("ADODB.Recordset")
             conn.Open(self.str_conn)
 
             sql = f"""
-
                 SELECT 
                     CONVERT(VARCHAR(10),os.date_finished, 103) as 'Entrega',
                     os.code AS 'OS', 
@@ -3433,7 +3448,6 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                     sm.specification AS 'Especificação',
                     sm.description AS 'Descrição', 
                     sm.code AS 'Code',
-                    sm.execution_time AS 'execution_time', 
                     sm.id AS 'service_mode_id',
                     
                     CASE 
@@ -3460,7 +3474,6 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                 AND (i.id_current_sector = {sector_id} or i.id_current_sector = 1)
                 AND sm.code LIKE '%631{lab_code.lower()}%'
                 ORDER BY os.date_finished ASC
-
             """
             
             rs.Open(sql, conn)
@@ -3468,9 +3481,6 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             if not rs.EOF:
                 rs.MoveFirst()
                 while not rs.EOF:
-                    execution_time_raw = rs.Fields('execution_time').Value
-                    duration_minutes = self.convert_time_to_minutes(execution_time_raw) if execution_time_raw else 0
-                    
                     os_code = rs.Fields('OS').Value if rs.Fields('OS').Value else ""
                     os_year = os_code[-4:]
                     os_parts = os_code.split('/')
@@ -3484,10 +3494,8 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                         'Especificação': rs.Fields('Especificação').Value if rs.Fields('Especificação').Value else "",
                         'Descrição': rs.Fields('Descrição').Value if rs.Fields('Descrição').Value else "",
                         'Code': rs.Fields('Code').Value if rs.Fields('Code').Value else "",
-                        'execution_time_raw': str(execution_time_raw) if execution_time_raw else "00:00",
-                        'duration_minutes': duration_minutes,
                         'service_mode_id': rs.Fields('service_mode_id').Value,
-                        'Status': rs.Fields('Status').Value if rs.Fields('Status').Value else "",  # ← ADD THIS
+                        'Status': rs.Fields('Status').Value if rs.Fields('Status').Value else "",
                     }
                     self.all_rows.append(row_data)
                     rs.MoveNext()
@@ -3495,15 +3503,16 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             rs.Close()
             conn.Close()
             
-            # 2. Query local IST-PGE for scheduled status
+            # 2. Mapas locais do IST-PGE
             scheduled_map = self._get_scheduled_status(sector_id)
-            
-            # 3. Query local IST-PGE for procedure info
             procedure_map = self._get_procedure_map()
+            nominal_time_map = self._get_execution_time_minutes_map()      # Tempo nominal
+            additional_time_map = self._get_additional_time_minutes_map()  # Tempo adicional
             
-            # 4. Update treeview columns
+            # 3. Update treeview columns
             self._update_treeview_columns()
             
+            # 4. Insert rows
             for row_data in self.all_rows:
                 item_code = row_data['Item']
                 service_code = row_data['Code']
@@ -3513,41 +3522,43 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                 proc = procedure_map.get(service_code, {})
                 proc_display = proc.get('name', '')[:30] if proc.get('name') else ""
                 
-                # Determine tag based on Status
+                nominal_time = nominal_time_map.get(service_code, 0)
+                add_time = additional_time_map.get(service_code, 0)
+                
+                nominal_display = f"{nominal_time} min" if nominal_time else "0 min"
+                add_display = f"{add_time} min" if add_time else "0 min"
+                
+                # Duração efetiva = nominal + adicional
+                effective_duration = nominal_time + add_time
+                
                 if row_status in ['Atraso', 'Hoje', 'Esta semana', 'Próxima semana', 'Futuro']:
                     tag = row_status
                 else:
                     tag = None
                 
+                values = (
+                    row_data['Entrega'],
+                    row_data['OS'], 
+                    row_data['Item'], 
+                    row_data['Tipo'],
+                    row_data['Especificação'],
+                    row_data['Code'],
+                    nominal_display,
+                    add_display,
+                    status,
+                    proc_display,
+                )
+                
                 if tag:
-                    item_id = self.tree.insert("", "end", values=(
-                        row_data['Entrega'],
-                        row_data['OS'], 
-                        row_data['Item'], 
-                        row_data['Tipo'],
-                        row_data['Especificação'],
-                        row_data['Code'],
-                        f"{row_data['duration_minutes']} min",
-                        status,
-                        proc_display,
-                    ), tags=(tag,))
+                    self.tree.insert("", "end", values=values, tags=(tag,))
                 else:
-                    self.tree.insert("", "end", values=(
-                        row_data['Entrega'],
-                        row_data['OS'], 
-                        row_data['Item'], 
-                        row_data['Tipo'],
-                        row_data['Especificação'],
-                        row_data['Code'],
-                        f"{row_data['duration_minutes']} min",
-                        status,
-                        proc_display,
-                    ))
-
+                    self.tree.insert("", "end", values=values)
+            
             count = len(self.all_rows)
             
         except Exception as e:
             self.status_label.config(text=f"Erro: {str(e)}")
+
 
     def _get_scheduled_status(self, sector_id):
         """Get mapping of item_code → status from IST-PGE"""
@@ -3676,39 +3687,84 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             else:
                 service_name = self.all_rows[idx].get('Especificação', service_code)
                 messagebox.showinfo("Aviso", f"Nenhum procedimento cadastrado para:\n{service_code} - {service_name}")
-                
+
+    def _get_additional_time_minutes_map(self):
+        """Get mapping of service_code → additional_execution_time_minutes from IST-PGE"""
+        time_map = {}
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            conn.Open(self.str_conn_primary)
+            
+            rs.Open("SELECT code, ISNULL(additional_execution_time_minutes, 0) as add_time FROM [IST-PGE].dbo.Service_Modes_Local", conn)
+            
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    code = rs.Fields('code').Value
+                    add_time = rs.Fields('add_time').Value or 0
+                    time_map[code] = add_time
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+        except Exception as e:
+            print(f"Error getting additional time map: {e}")
+        
+        return time_map
+    
+    def _get_execution_time_minutes_map(self):
+        """Get mapping of service_code → additional_execution_time_minutes from IST-PGE"""
+        time_map = {}
+        try:
+            conn = win32com.client.Dispatch("ADODB.Connection")
+            rs = win32com.client.Dispatch("ADODB.Recordset")
+            conn.Open(self.str_conn_primary)
+            
+            rs.Open("SELECT code, ISNULL(execution_time_minutes, 0) as time FROM [IST-PGE].dbo.Service_Modes_Local", conn)
+            
+            if not rs.EOF:
+                rs.MoveFirst()
+                while not rs.EOF:
+                    code = rs.Fields('code').Value
+                    add_time = rs.Fields('time').Value or 0
+                    time_map[code] = add_time
+                    rs.MoveNext()
+            
+            rs.Close()
+            conn.Close()
+            
+        except Exception as e:
+            print(f"Error getting additional time map: {e}")
+        
+        return time_map
+    
     def _update_treeview_columns(self):
-        """Update treeview to include Status column"""
-        # Reconfigure columns
-        #self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Descrição", "Código", "Nominal", "Status de Agendamento")
-        self.tree["columns"] = ("Entrega","OS", "Item", "Tipo", "Especificação", "Código", "Nominal", "Status de Agendamento", "Instrução de Trabalho")
+        """Update treeview to include Nominal and Adicional columns"""
+        self.tree["columns"] = ("Entrega", "OS", "Item", "Tipo", "Especificação", "Código", "Nominal", "Adicional", "Status de Agendamento", "Instrução de Trabalho")
         
         self.tree.heading("Entrega", text="Entrega")
         self.tree.heading("OS", text="OS")
         self.tree.heading("Item", text="Item")
         self.tree.heading("Tipo", text="Tipo")
         self.tree.heading("Especificação", text="Especificação")
-        #self.tree.heading("Descrição", text="Descrição")
         self.tree.heading("Código", text="Código")
         self.tree.heading("Nominal", text="Nominal")
+        self.tree.heading("Adicional", text="Adicional")
         self.tree.heading("Status de Agendamento", text="Status de Agendamento")
-        self.tree.heading("Instrução de Trabalho", text="Instrução de Trabalho")
+        self.tree.heading("Instrução de Trabalho", text="Instrução Trab.")
         
-        self.tree.column("Entrega", width=20)
-        self.tree.column("OS", width=20)
-        self.tree.column("Item", width=70)
+        self.tree.column("Entrega", width=45)
+        self.tree.column("OS", width=45)
+        self.tree.column("Item", width=55)
         self.tree.column("Tipo", width=70)
-        self.tree.column("Especificação", width=160)
-        #self.tree.column("Descrição", width=200)
-        self.tree.column("Código", width=30)
-        self.tree.column("Nominal", width=20)
-        self.tree.column("Status de Agendamento", width=110)
-        self.tree.column("Instrução de Trabalho", width=70)
-        
-        ## Color tags for status
-        #self.tree.tag_configure('Disponível', background="#E0EC30")  # Green
-        #self.tree.tag_configure('PENDING', background='#FFF3CD')    # Yellow
-
+        self.tree.column("Especificação", width=140)
+        self.tree.column("Código", width=35)
+        self.tree.column("Nominal", width=30)
+        self.tree.column("Adicional", width=30)
+        self.tree.column("Status de Agendamento", width=100)
+        self.tree.column("Instrução de Trabalho", width=80)
 
     def convert_time_to_minutes(self, time_str):
         if not time_str:
@@ -3818,34 +3874,45 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             conn = win32com.client.Dispatch("ADODB.Connection")
             conn.Open(self.str_conn_primary)
             
+            # Carregar mapas locais
+            nominal_time_map = self._get_execution_time_minutes_map()
+            additional_time_map = self._get_additional_time_minutes_map()
+            
             added_count = 0
             for idx in selected_indices:
                 row = self.all_rows[idx]
-                duration = row['duration_minutes']
                 item_code = row['Item']
-                
+                service_code = row['Code']
                 service_mode_id = row.get('service_mode_id', None)
+                
+                # Tempo nominal e adicional do Service_Modes_Local
+                nominal_time = nominal_time_map.get(service_code, 0)
+                additional_time = additional_time_map.get(service_code, 0)
+                
+                rs = win32com.client.Dispatch("ADODB.Recordset")
 
-                # Sync to Service_Modes_Local
+                # Sync to Service_Modes_Local (sem sobrescrever se já existe)
                 sync_sql = f"""
                         IF NOT EXISTS (SELECT 1 FROM [IST-PGE].dbo.Service_Modes_Local WHERE id = {service_mode_id})
                         BEGIN
-                            INSERT INTO [IST-PGE].dbo.Service_Modes_Local (id, code, specification, description, execution_time_minutes)
-                            VALUES ({service_mode_id}, '{row['Code']}', '{str(row['Especificação']).replace("'", "''")}', 
-                                    '{str(row['Descrição']).replace("'", "''")}', {duration});
+                            INSERT INTO [IST-PGE].dbo.Service_Modes_Local 
+                                (id, code, specification, description, execution_time_minutes, additional_execution_time_minutes)
+                            VALUES ({service_mode_id}, '{row['Code']}', 
+                                    '{str(row['Especificação']).replace("'", "''")}', 
+                                    '{str(row['Descrição']).replace("'", "''")}', 
+                                    {nominal_time}, {additional_time});
                         END
                         ELSE
                         BEGIN
                             UPDATE [IST-PGE].dbo.Service_Modes_Local
-                            SET execution_time_minutes = {duration},
-                                specification = '{str(row['Especificação']).replace("'", "''")}',
+                            SET specification = '{str(row['Especificação']).replace("'", "''")}',
                                 description = '{str(row['Descrição']).replace("'", "''")}'
                             WHERE id = {service_mode_id};
                         END
                     """
+                
                 conn.Execute(sync_sql)
                 
-                rs = win32com.client.Dispatch("ADODB.Recordset")
                 rs.Open(f"SELECT id FROM [IST-PGE].dbo.Service_Modes_Local WHERE id = {service_mode_id}", conn)
                 local_service_id = rs.Fields('id').Value if not rs.EOF else None
                 rs.Close()
@@ -3864,7 +3931,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                         WHERE notes LIKE '% - {item_code} - %' AND id_sector = {sector_id}
                     """)
                     
-                    # Insert new schedule
+                    # Insert new schedule (sem custom_duration — usa o padrão)
                     notes = f"OS {row['OS']} - {row['Item']} - {row['Especificação']}"
                     schedule_sql = f"""
                         INSERT INTO [IST-PGE].dbo.Service_Schedule (service_id, notes, id_sector)
@@ -3875,13 +3942,6 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             
             conn.Close()
             
-            #if added_count == 1:
-            #    self.status_label.config(text=f"{added_count} serviço adicionado à fila!")
-            #elif added_count == 0:
-            #    self.status_label.config(text=f"Nenhum serviço adicionado à fila!")
-            #else:
-            #    self.status_label.config(text=f"{added_count} serviços adicionados à fila!")
-                
             self.clear_selection()
             self.process_fifo()
             self.hide_loading_screen()
@@ -3890,7 +3950,6 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             messagebox.showerror("Erro", f"Falha ao agendar:\n{str(e)}")
 
     def process_fifo(self):
-        
         sector_id = self.lab_config.get('sector_id', 0)
         lab_name = self.lab_config.get('name', '')
         
@@ -3902,17 +3961,16 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             
             sql = f"""
                 SELECT 
-                ss.id as schedule_id, 
-                ss.service_id,
-                s.execution_time_minutes, 
-                ss.priority, 
-                ss.requested_at, 
-                ss.notes
-
+                    ss.id as schedule_id, 
+                    ss.service_id,
+                    s.execution_time_minutes,
+                    ISNULL(s.additional_execution_time_minutes, 0) as additional_execution_time_minutes,
+                    ISNULL(ss.custom_execution_time, 0) as custom_execution_time,
+                    ss.priority, 
+                    ss.requested_at, 
+                    ss.notes
                 FROM [IST-PGE].dbo.Service_Schedule ss
-
                 JOIN [IST-PGE].dbo.Service_Modes_Local s ON ss.service_id = s.id
-                
                 WHERE ss.status = 'PENDING' AND ss.id_sector = {sector_id}
                 ORDER BY ss.priority ASC, ss.requested_at ASC
             """
@@ -3926,6 +3984,8 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
                         'schedule_id': rs.Fields('schedule_id').Value,
                         'service_id': rs.Fields('service_id').Value,
                         'execution_time_minutes': rs.Fields('execution_time_minutes').Value,
+                        'additional_execution_time_minutes': rs.Fields('additional_execution_time_minutes').Value or 0,
+                        'custom_execution_time': rs.Fields('custom_execution_time').Value or 0,
                         'priority': rs.Fields('priority').Value,
                         'requested_at': rs.Fields('requested_at').Value,
                         'notes': rs.Fields('notes').Value
@@ -3944,12 +4004,32 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
 
             current_time = datetime.now()
             scheduled_count = 0
+            last_service_id = None  # ← Para lógica de adicional
+            
             for service in pending_services:
-                next_start, next_end = self.find_next_available_slot(current_time, service['execution_time_minutes'])
+                service_id = service['service_id']
                 
-
+                # Se custom_execution_time foi preenchido, usa ele. Senão:
+                if service['custom_execution_time'] > 0:
+                    duration = service['custom_execution_time']
+                else:
+                    #if service_id != last_service_id:
+                    #    duration = service['execution_time_minutes'] + service['additional_execution_time_minutes']
+                    #else:
+                    #    duration = service['execution_time_minutes']
+                
+                    # Primeiro do tipo: nominal + adicional
+                    # Mesmo tipo em sequência: só nominal
+                    if service_id != last_service_id:
+                        duration = service['execution_time_minutes']
+                    else:
+                        duration = service['additional_execution_time_minutes']
+                
+                next_start, next_end = self.find_next_available_slot(current_time, duration)
+                
                 if next_start is None:
                     continue
+                
                 conn.Execute(f"""
                     UPDATE [IST-PGE].dbo.Service_Schedule
                     SET scheduled_start = '{next_start.strftime('%Y-%m-%d %H:%M:%S')}',
@@ -3967,6 +4047,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
 
                 current_time = next_end
                 scheduled_count += 1
+                last_service_id = service_id  # ← Atualiza para o próximo
             
             self.hide_loading_screen()
             conn.Close()
@@ -3977,13 +4058,11 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
             else:
                 self.load_services()
                 messagebox.showinfo("Info agendamento", f"{scheduled_count} serviços agendados em Laboratório de {lab_name}!")
-              
+            
         except Exception as e:
             self.hide_loading_screen()
             messagebox.showerror("Erro", f"Falha ao processar fila:\n{str(e)}")
-        
-    # ===== FIFO ENGINE (same as ServiceScheduler) =====
-    
+
     def find_next_available_slot(self, from_time, duration_minutes):
         check_date = from_time.date()
         max_days = 365
@@ -3992,7 +4071,7 @@ class ServiceSchedulerLinkedDirect: ### SELETOR DE SERVIÇOS PARA AGENDAMENTO
         availability = self._get_availability()
         exceptions = self._get_exceptions()
         
-        for day_offset in range(max_days):
+        for _ in range(max_days):
             sql_day_of_week = (check_date.weekday() + 1) % 7
             day_windows = [w for w in availability if w['day_of_week'] == sql_day_of_week]
             
@@ -4601,7 +4680,7 @@ class DatabaseViewer6: ### VISTA GERAL
                 if temp_data['chat_id']:
                     link = f"https://teams.cloud.microsoft/l/chat/19:{temp_data['chat_id']}@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
                     #link = f"https://teams.cloud.microsoft/l/chat/19:fc9176a569904180bbfa3eeb1bd52651@thread.v2/conversations?context=%7B%22contextType%22%3A%22chat%22%7D"
-                    print('link ',link)
+                    #print('link ',link)
                     webbrowser.open(link)
                 else:
                     
